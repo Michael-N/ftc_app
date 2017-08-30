@@ -3,7 +3,7 @@ package org.firstinspires.ftc.teamcode;
 /**
  * Created by Mike on 8/30/2017.
  */
-public abstract class HolomorphicDrive {
+public abstract class HolonomicDrive {
     // Goals of this Class (Note to self Put this in a seperate README.md)
     /*
     *   Take arguments such as +-
@@ -29,8 +29,18 @@ public abstract class HolomorphicDrive {
     *                 Bottom
     *                   -y
     *
-    *   example:    HolomorphicDrive.rotate(180) rotates 180 Left (as per standard vector direction for rotation matrix)
+    *   example:    HolonomicDrive.rotate(180) rotates 180 Left (as per standard vector direction for rotation matrix)
     *               which returns an array of 4 items corresponding to the number of steps for each motor
+    *
+    *   BASE REQUIRED Methods:
+    *       HolonomicDrive.move(x,y);
+    *       HolonomicDrive.rotate(theta);
+    *
+    *  Proposed Helper Methods (Extra Not Strictly Necessary ~~ if we have time):
+    *       HolonomicDrive.resetOrientation();
+    *       HolonomicDrive.pathEncode([list-of-cordinate-pairs]);   yeild a sequence of motor encodings
+    *
+    *
     * */
 
     //Setup
