@@ -1,75 +1,80 @@
 package org.firstinspires.ftc.teamcode;
 
+import static java.lang.Math.abs;
+
+import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
+import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
+import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
+
 /**
- * Created by Mike on 8/30/2017.
+ * Created by andre on 8/31/2017.
  */
-public abstract class HolonomicDrive {
-    // Goals of this Class (Note to self Put this in a seperate README.md)
-    /*
-    *   Take arguments such as +-
-    *
-    *   move x steps    (horozontal shift)
-    *   move y steps    (vertical shift)
-    *   rotate θ deg   (yaw)
-    *
-    *   and return an array of 4 step values for the motor encoders (even if encoders not used the info is valid as a time ratio)
-    *   based upon the holonomic drive principal
-    *
-    *   the wheel step values are returned as an array with the indicies corresponding
-    *   to the diagram below:
-    *
-    *
-    *                   +y
-    *     Top/Foreward Orientation/ Front of robot
-    *
-    *           (1) //     \\ (0)
-    *    -x  Left       ^       Right  +x
-    *           (3) \\     // (2)
-    *
-    *                 Bottom
-    *                   -y
-    *
-    *   example:    HolonomicDrive.rotate(180) rotates 180 Left (as per standard vector direction for rotation matrix)
-    *               which returns an array of 4 items corresponding to the number of steps for each motor
-    *
-    *   BASE REQUIRED Methods:
-    *       HolonomicDrive.move(x,y);
-    *       HolonomicDrive.rotate(theta);
-    *
-    *  Proposed Helper Methods (Extra Not Strictly Necessary ~~ if we have time):
-    *       HolonomicDrive.resetOrientation();
-    *       HolonomicDrive.pathEncode([list-of-cordinate-pairs]);   yeild a sequence of motor encodings
-    *
-    *
-    * */
+@TeleOp(name = "HolonomicDrive")
+//@Disabled
+public class HolonomicDrive extends LinearOpMode
+{
+    private DcMotor motorLeftFront;
+    private DcMotor motorLeftRear;
+    private DcMotor motorRightFront;
+    private DcMotor motorRightRear;
 
-    //Setup
-        //Relative Rotation in deg
-        public static double holo_current_rotation = 0;
+    @Override
+    public void runOpMode() throws InterruptedException
+    {
+        motorLeftFront = hardwareMap.dcMotor.get("motorLeftFront");
+        motorLeftRear = hardwareMap.dcMotor.get("motorLeftRear");
 
-        //Wheel Mapping
-            public static int[] wheel_maping = {0,1,2,3}// DO NOT TOUCH UNLESS YOU KNOW WHAT YOU ARE DOING!
+        motorRightFront = hardwareMap.dcMotor.get("motorRightFront");
+        motorRightRear = hardwareMap.dcMotor.get("motorRightRear");
 
-    //Settings:
-        //Holonomic Drive x y relative strengths (i.e mechenum wheels 30:70)
-        // (X as being defined as Parallel to the axel of the wheels)
-        public static double holo_x_strength = 0.3;
-        public static double holo_y_strength = 0.7;
+        //reverse two motors, may need to do left instead
+        motorRightFront.setDirection(DcMotor.Direction.REVERSE);
+        motorRightRear.setDirection(DcMotor.Direction.REVERSE);
 
-        //Wheel corrections/ Fine tuning:
-        public int[] wheel_x_corrections = {0,0,0,0}; // One for each wheel corresponding top right,left bottom right,left
-        public int[] wheel_y_corrections = {0,0,0,0}; // One for each wheel corresponding top right,left bottom right,left
+        //public double slowDrive = 1.0;
+        //public boolean wasPressed = false;
+        public int driveSpeed = 1;
+        //driveSpeed = 1 is regular
+        //driveSpeed = -1 is half
+        waitForStart();
 
-        //Wheel invert spin direction: DO NOT TOUCH UNLESS YOU KNOW WHAT YOU ARE DOING!
-        public int[] wheel_rot_invert = {false,false,false,false};
+        while(opModeIsActive())
+        {
+            //if slowDrive = 1, drive mode normal
+            //if slowDrive = 0.5, drive mode half
+            if(gamepad1.y)
+            {
+                driveSpeed = -driveSpeed;
+            }
 
-    //Rotation Code
-    public rotate(double theta_in){
+
+
+            //forwards and reverse
+            if((abs(gamepad1.left_stick_y) >= 0.15) &&  (abs(gamepad1.left_stick_x) <= 0.15))
+            {
+                if(driveSpeed == 1)
+                {
+                    motorLeftFront.setPower(-gamepad1.left_stick_y);
+                    motorLeftRear.setPower(-gamepad1.left_stick_y);
+
+                    motorRightFront.setPower(-gamepad1.left_stick_y);
+                    motorRightRear.setPower(-gamepad1.left_stick_y);
+                }
+                if(driveSpeed == -1)
+                {
+                    motorLeftFront.setPower(-0.5*gamepad1.left_stick_y);
+                    motorLeftRear.setPower(-0.5*gamepad1.left_stick_y);
+
+                    motorRightFront.setPower(-0.5*gamepad1.left_stick_y);
+                    motorRightRear.setPower(-0.5*gamepad1.left_stick_y);
+                }
+            }
+            if
+
+
+
+            idle();
+        }
     }
-
-    //Move code
-    public move( double x_in,double y_in){
-
-    }
-
 }
