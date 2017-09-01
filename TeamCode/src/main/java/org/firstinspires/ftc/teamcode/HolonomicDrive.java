@@ -133,7 +133,8 @@ public class HolonomicDrive extends LinearOpMode
                     motorRightRear.setPower(0.5);
                 }
             }
-            else
+            //brake while no significant controller input
+            if (((abs(gamepad1.left_stick_x) <= 0.15) && (abs(gamepad1.left_stick_y) <= 0.15))  &&  ((!gamepad1.left_bumper) && (!gamepad1.right_bumper)))
             {
                 motorLeftFront.setPower(0.0);
                 motorLeftRear.setPower(0.0);
@@ -142,7 +143,7 @@ public class HolonomicDrive extends LinearOpMode
             }
 
 
-
+            //gives the loop a little time for the hardware to catch up with the software; allows time for linear loop to process termination request before looping again
             idle();
         }
     }
