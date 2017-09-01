@@ -18,7 +18,11 @@ public class HolonomicDrive extends LinearOpMode
     private DcMotor motorLeftRear;
     private DcMotor motorRightFront;
     private DcMotor motorRightRear;
-
+    //public double slowDrive = 1.0;
+    //public boolean wasPressed = false;
+    public int driveSpeed = 1;
+    //driveSpeed = 1 is regular
+    //driveSpeed = -1 is half
     @Override
     public void runOpMode() throws InterruptedException
     {
@@ -32,11 +36,7 @@ public class HolonomicDrive extends LinearOpMode
         motorRightFront.setDirection(DcMotor.Direction.REVERSE);
         motorRightRear.setDirection(DcMotor.Direction.REVERSE);
 
-        //public double slowDrive = 1.0;
-        //public boolean wasPressed = false;
-        public int driveSpeed = 1;
-        //driveSpeed = 1 is regular
-        //driveSpeed = -1 is half
+
         waitForStart();
 
         while(opModeIsActive())
@@ -70,7 +70,76 @@ public class HolonomicDrive extends LinearOpMode
                     motorRightRear.setPower(-0.5*gamepad1.left_stick_y);
                 }
             }
-            if
+            //left and right strafe~ note: x axis may be flipped so that right is negative, if strafe malfunctions, try the opposite of the x-axis input values
+            //for now, assume left on x-axis is 1; right is -1
+            if((abs(gamepad1.left_stick_x) >= 0.15) && (abs(gamepad1.left_stick_y) <= 0.15))
+            {
+                if(driveSpeed == 1)
+                {
+                    motorLeftFront.setPower(-gamepad1.left_stick_x);
+                    motorLeftRear.setPower(gamepad1.left_stick_x);
+
+                    motorRightFront.setPower(gamepad1.left_stick_x);
+                    motorRightRear.setPower(-gamepad1.left_stick_x);
+
+                }
+                if(driveSpeed == -1)
+                {
+                    motorLeftFront.setPower(-0.5*gamepad1.left_stick_x);
+                    motorLeftRear.setPower(0.5*gamepad1.left_stick_x);
+
+                    motorRightFront.setPower(0.5*gamepad1.left_stick_x);
+                    motorRightRear.setPower(-0.5*gamepad1.left_stick_x);
+
+                }
+            }
+            //rotate clock
+            if((gamepad1.left_bumper) && (!gamepad1.right_bumper))
+            {
+                if(driveSpeed == 1)
+                {
+                    motorLeftFront.setPower(1.0);
+                    motorLeftRear.setPower(1.0);
+
+                    motorRightFront.setPower(-1.0);
+                    motorRightRear.setPower(-1.0);
+                }
+                if(driveSpeed == -1)
+                {
+                    motorLeftFront.setPower(0.5);
+                    motorLeftRear.setPower(0.5);
+
+                    motorRightFront.setPower(-0.5);
+                    motorRightRear.setPower(-0.5);
+                }
+            }
+            //rotate counter
+            if((gamepad1.right_bumper) && (!gamepad1.left_bumper))
+            {
+                if(driveSpeed == 1)
+                {
+                    motorLeftFront.setPower(-1.0);
+                    motorLeftRear.setPower(-1.0);
+
+                    motorRightFront.setPower(1.0);
+                    motorRightRear.setPower(1.0);
+                }
+                if(driveSpeed == -1)
+                {
+                    motorLeftFront.setPower(-0.5);
+                    motorLeftRear.setPower(-0.5);
+
+                    motorRightFront.setPower(0.5);
+                    motorRightRear.setPower(0.5);
+                }
+            }
+            else
+            {
+                motorLeftFront.setPower(0.0);
+                motorLeftRear.setPower(0.0);
+                motorRightFront.setPower(0.0);
+                motorRightRear.setPower(0.0);
+            }
 
 
 
