@@ -8,8 +8,9 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 
 /**
- * Created by andre on 8/31/2017.
+ * Created by andrew on 8/31/2017.
  */
+//version alpha 1.0
 @TeleOp(name = "HolonomicDrive")
 //@Disabled
 public class HolonomicDrive extends LinearOpMode
