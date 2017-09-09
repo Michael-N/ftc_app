@@ -19,8 +19,8 @@ public class HolonomicDrive extends LinearOpMode
     private DcMotor motorLeftRear;
     private DcMotor motorRightFront;
     private DcMotor motorRightRear;
-    //public double slowDrive = 1.0;
-    //public boolean wasPressed = false;
+
+
     public int driveSpeed = 1;
     //driveSpeed = 1 is regular
     //driveSpeed = -1 is half
