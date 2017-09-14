@@ -20,6 +20,20 @@ public class HolonomicDrive extends LinearOpMode
     private DcMotor motorRightFront;
     private DcMotor motorRightRear;
 
+    /*
+        public DcMotor[] AllMotors = {
+            hardwareMap.dcMotor.get(""),
+            hardwareMap.dcMotor.get(""),
+            hardwareMap.dcMotor.get(""),
+            hardwareMap.dcMotor.get("")
+        };
+        
+        public int[] MotorMappings = {0,1,2,3};
+        public int[] MotorReverse = {False,False,False,False};
+        public double PrecisionSpeed = 0.5;
+        public double RegularSpeed = 1.0;
+        
+    */
 
     public int driveSpeed = 1;
     //driveSpeed = 1 is regular
