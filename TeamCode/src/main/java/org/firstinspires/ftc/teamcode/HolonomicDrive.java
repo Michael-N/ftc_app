@@ -99,7 +99,7 @@ public class HolonomicDrive extends LinearOpMode
             //=== Rotation Movement: left_bumper = CounterClockwise, right_bumper = Clockwise (Makes more sense than the reverse...)
                if(this.eXOR(gamepad.left_bumper, gamepad.right_bumper)){
                     if(gamepad.right_bumper){// rotate Clockwise
-                        doubble[] clockActivations = {1.0,1.0,-1.0,-1.0};
+                        double[] clockActivations = {1.0,1.0,-1.0,-1.0};
                         this.activateMotors(clockActivations,this.isPrecisionSpeed);
                     }else{ //if right is false than right must be true to meet the initial condition
                         double[] cntrClockActivations = {-1.0,-1.0,1.0,1.0};
@@ -108,14 +108,14 @@ public class HolonomicDrive extends LinearOpMode
                }
 
             //Redefine LEFT Stick Values (invert if settings say so):
-                doubble stick_x = InvertControlesXY[0] ? -gamepad1.left_stick_x : gamepad1.left_stick_x;
-                doubble stick_y = InvertControlesXY[1] ? -gamepad1.left_stick_y : gamepad1.left_stick_y;
+                double stick_x = InvertControlesXY[0] ? -gamepad1.left_stick_x : gamepad1.left_stick_x;
+                double stick_y = InvertControlesXY[1] ? -gamepad1.left_stick_y : gamepad1.left_stick_y;
 
            //=== Planar Movement XY
                 //=== Natural Inversion Config :
-                doubble[] horozontalActivations = {-stick_x,stick_x,stick_x,-stick_x};
-                doubble[] verticalActivations = {-stick_x,-stick_x,-stick_x,-stick_x};
-                doubble[] stayStill = {0.0,0.0,0.0,0.0};
+                double[] horozontalActivations = {-stick_x,stick_x,stick_x,-stick_x};
+                double[] verticalActivations = {-stick_x,-stick_x,-stick_x,-stick_x};
+                double[] stayStill = {0.0,0.0,0.0,0.0};
 
                //== Movement Forewards & Reverse (vertical):
                if(this.isAboveThreshold(stick_y) && !this.isAboveThreshold(stick_x)){
