@@ -109,7 +109,7 @@ public class HolonomicDrive extends LinearOpMode
 
             //Redefine LEFT Stick Values (invert if settings say so):
                 doubble stick_x = InvertControlesXY[0] ? -gamepad1.left_stick_x : gamepad1.left_stick_x;
-                doubble stick_y = InvertControlesXY[0] ? -gamepad1.left_stick_y : gamepad1.left_stick_y;
+                doubble stick_y = InvertControlesXY[1] ? -gamepad1.left_stick_y : gamepad1.left_stick_y;
 
            //=== Planar Movement XY
                 //=== Natural Inversion Config :
