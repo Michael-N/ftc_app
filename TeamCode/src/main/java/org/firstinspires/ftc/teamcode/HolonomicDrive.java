@@ -29,7 +29,7 @@ public class HolonomicDrive extends LinearOpMode
         public double PrecisionSpeed = 0.5;// 0.5 means one half speed... tap& release y to activate to toggle this
         public double RegularSpeed = 1.0;
         public boolean[] InvertControlsXY = {False,False};
-        public doubble stickThreshold = 0.15;
+        public double stickThreshold = 0.15;
 
 
         //=========== Initilizations ================
@@ -64,7 +64,7 @@ public class HolonomicDrive extends LinearOpMode
        waitForStart()
 
        //=== Helper Methods:
-       public void activateMotors(doubble[] activationValues,boolean usePrecision){
+       public void activateMotors(double[] activationValues,boolean usePrecision){
             for(int k=0;k<4;k++){
                 if(usePrecision){
                     //multiply by setting
@@ -155,8 +155,8 @@ public class HolonomicDrive extends LinearOpMode
 
         while(opModeIsActive())
         {
-            //if slowDrive = 1, drive mode normal
-            //if slowDrive = 0.5, drive mode half
+            //if driveSpeed = 1, drive mode normal
+            //if driveSpeed = -, drive mode half
             if(gamepad1.y)
             {
                 driveSpeed = -driveSpeed;
@@ -207,28 +207,8 @@ public class HolonomicDrive extends LinearOpMode
 
                 }
             }
-            //rotate clock
-            if((gamepad1.left_bumper) && (!gamepad1.right_bumper))
-            {
-                if(driveSpeed == 1)
-                {
-                    motorLeftFront.setPower(1.0);
-                    motorLeftRear.setPower(1.0);
-
-                    motorRightFront.setPower(-1.0);
-                    motorRightRear.setPower(-1.0);
-                }
-                if(driveSpeed == -1)
-                {
-                    motorLeftFront.setPower(0.5);
-                    motorLeftRear.setPower(0.5);
-
-                    motorRightFront.setPower(-0.5);
-                    motorRightRear.setPower(-0.5);
-                }
-            }
             //rotate counter
-            if((gamepad1.right_bumper) && (!gamepad1.left_bumper))
+            if((gamepad1.left_bumper) && (!gamepad1.right_bumper))
             {
                 if(driveSpeed == 1)
                 {
@@ -245,6 +225,26 @@ public class HolonomicDrive extends LinearOpMode
 
                     motorRightFront.setPower(0.5);
                     motorRightRear.setPower(0.5);
+                }
+            }
+            //rotate clock
+            if((gamepad1.right_bumper) && (!gamepad1.left_bumper))
+            {
+                if(driveSpeed == 1)
+                {
+                    motorLeftFront.setPower(1.0);
+                    motorLeftRear.setPower(1.0);
+
+                    motorRightFront.setPower(-1.0);
+                    motorRightRear.setPower(-1.0);
+                }
+                if(driveSpeed == -1)
+                {
+                    motorLeftFront.setPower(0.5);
+                    motorLeftRear.setPower(0.5);
+
+                    motorRightFront.setPower(-0.5);
+                    motorRightRear.setPower(-0.5);
                 }
             }
             //brake while no significant controller input
