@@ -77,6 +77,11 @@ public class HolonomicDrive extends LinearOpMode
             }
        }
 
+       public static boolean eXOR(boolean x, boolean y) {// Courtesy of ~stack overflow~
+            //works like or except if both  are true then it is false also
+            return ( ( x || y ) && ! ( x && y ) );
+        }
+
        public boolean isAboveThreshold(doubble inputValue){
             if(abs(inputValue)> this.stickThreshold){
                 return True;
@@ -92,7 +97,7 @@ public class HolonomicDrive extends LinearOpMode
                }
 
             //=== Rotation Movement: left_bumper = CounterClockwise, right_bumper = Clockwise (Makes more sense than the reverse...)
-               if(gamepad.left_bumper || gamepad.right_bumper){
+               if(this.eXOR(gamepad.left_bumper, gamepad.right_bumper)){
                     if(gamepad.right_bumper){// rotate Clockwise
                         doubble[] clockActivations = {1.0,1.0,-1.0,-1.0};
                         this.activateMotors(clockActivations,this.isPrecisionSpeed);
