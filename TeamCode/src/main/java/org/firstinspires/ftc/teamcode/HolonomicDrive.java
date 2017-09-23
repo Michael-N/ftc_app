@@ -20,120 +20,6 @@ public class HolonomicDrive extends LinearOpMode
     private DcMotor motorRightFront;
     private DcMotor motorRightRear;
 
-    /*
-
-        //=========== Settings and Config ==============
-        public string motorNames = {"motorLeftFront","motorLeftRear","motorRightFront","motorRightRear"};
-        public int[] MotorMappings = {0,1,2,3};
-        public boolean[] MotorReverse = {False,False,False,False}; //applied after mappings--> corresponds to index of mapped motor
-        public double PrecisionSpeed = 0.5;// 0.5 means one half speed... tap& release y to activate to toggle this
-        public double RegularSpeed = 1.0;
-        public boolean[] InvertControlsXY = {False,False};
-        public double stickThreshold = 0.15;
-
-
-        //=========== Initilizations ================
-            //Store the state of Precision Status:
-            public boolean isPrecisionSpeed = False;
-
-            //=== Initial Motor fetch
-            public DcMotor[] AllMotors = {
-                hardwareMap.dcMotor.get(motorNames[0]),
-                hardwareMap.dcMotor.get(motorNames[1]),
-                hardwareMap.dcMotor.get(motorNames[2]),
-                hardwareMap.dcMotor.get(motorNames[3])
-            };
-
-            //=== Mapped Motor Storage
-            public MappedMotors = new DcMotors(4);
-
-             //=== Initilize mappings:
-            for(int j = 0; i<4; i++){
-                MappedMotors[i] = AllMotors[MotorMappings[i]];
-            }
-
-             //=== Initilize reverses
-            for( int i=0; i<4; i++){
-                //Reverses:
-                if(MotorReverse.get(i)){
-                    MappedMotors[i].setDirection(DcMotor.Direction.REVERSE);
-                }
-
-            }
-       //=== Wait for the Start:
-       waitForStart()
-
-       //=== Helper Methods:
-       public void activateMotors(double[] activationValues,boolean usePrecision){
-            for(int k=0;k<4;k++){
-                if(usePrecision){
-                    //multiply by setting
-                     this.MappedMotors.setPower(this.PrecisionSpeed*activationValues[i]);
-                }else{
-                    //multiply by setting
-                    this.MappedMotors.setPower(this.RegularSpeed*activationValues[i]);
-                }
-
-            }
-       }
-
-       public static boolean eXOR(boolean x, boolean y) {// Courtesy of ~stack overflow~
-            //works like or except if both  are true then it is false also
-            return ( ( x || y ) && ! ( x && y ) );
-        }
-
-       public boolean isAboveThreshold(doubble inputValue){
-            if(abs(inputValue)> this.stickThreshold){
-                return True;
-            }else{
-                return False;
-            }
-       }
-
-       //========= Put in the loop: while the  opModeIsActive() is true do the following
-           //=== Use Precision Modifier:
-               if(gamepad.y){
-                    this.isPrecisionSpeed = !this.isPrecisionSpeed; // toggle precision speed by 'clicking' y
-               }
-
-            //=== Rotation Movement: left_bumper = CounterClockwise, right_bumper = Clockwise (Makes more sense than the reverse...)
-               if(this.eXOR(gamepad.left_bumper, gamepad.right_bumper)){
-                    if(gamepad.right_bumper){// rotate Clockwise
-                        double[] clockActivations = {1.0,1.0,-1.0,-1.0};
-                        this.activateMotors(clockActivations,this.isPrecisionSpeed);
-                    }else{ //if right is false than right must be true to meet the initial condition
-                        double[] cntrClockActivations = {-1.0,-1.0,1.0,1.0};
-                        this.activateMotors(clockActivations,this.isPrecisionSpeed);
-                    }
-               }
-
-            //Redefine LEFT Stick Values (invert if settings say so):
-                double stick_x = InvertControlesXY[0] ? -gamepad1.left_stick_x : gamepad1.left_stick_x;
-                double stick_y = InvertControlesXY[1] ? -gamepad1.left_stick_y : gamepad1.left_stick_y;
-
-           //=== Planar Movement XY
-                //=== Natural Inversion Config :
-                double[] horozontalActivations = {-stick_x,stick_x,stick_x,-stick_x};
-                double[] verticalActivations = {-stick_x,-stick_x,-stick_x,-stick_x};
-                double[] stayStill = {0.0,0.0,0.0,0.0};
-
-               //== Movement Forewards & Reverse (vertical):
-               if(this.isAboveThreshold(stick_y) && !this.isAboveThreshold(stick_x)){
-                    this.activateMotors(verticalActivations,this.isPrecisionSpeed);
-               }
-               //== Movement Strafe (horozontal):
-               if(this.isAboveThreshold(stick_X) && !this.isAboveThreshold(stick_y)){
-                    this.activateMotors(horozontalActivations,this.isPrecisionSpeed);
-               }
-
-               //== Movement STILL
-               if(!this.isAboveThreshold(stick_y) && !this.isAboveThreshold(stick_x)){
-                    this.activateMotors(stayStill,this.isPrecisionSpeed);
-               }
-        //=== Wait for hardware:
-        idle();
-    */
-
     public int driveSpeed = 1;
     //driveSpeed = 1 is regular
     //driveSpeed = -1 is half
@@ -157,6 +43,12 @@ public class HolonomicDrive extends LinearOpMode
         {
             //if driveSpeed = 1, drive mode normal
             //if driveSpeed = -, drive mode half
+           /*
+            WARNING! gamepad is still undefined!!!!! according to the docs use gamepad1 or gamepad1
+            see HolonomicDriveReccord for implementation example
+            fix:
+                    public Gamepad gamepad = gamepad1;
+           */
             if(gamepad1.y)
             {
                 driveSpeed = -driveSpeed;
