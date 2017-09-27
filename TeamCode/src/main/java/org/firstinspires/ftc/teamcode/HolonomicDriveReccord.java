@@ -5,6 +5,7 @@ import static java.lang.Math.abs;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.Gamepad;
+import com.qualcomm.robotcore.hardware.HardwareMap;
 import java.util.ArrayList;
 /*
 import org.json.simple.JSONObject;
@@ -24,12 +25,12 @@ public class HolonomicDriveReccord extends LinearOpMode {
     //=========== Settings and Config ==============
     public String[] motorNames = {"motorLeftFront","motorLeftRear","motorRightFront","motorRightRear"};
     public int[] MotorMappings = {0,1,2,3};
-    public boolean[] MotorReverse = {false,false,false,false}; //applied after mappings--> corresponds to index of mapped motor
-    public double PrecisionSpeed = 0.5;// 0.5 means half speed... tap & release <y> to toggle precision speed
+    public boolean[] MotorReverse = {true,true,false,false}; //applied after mappings--> corresponds to index of mapped motor
+    public double PrecisionSpeed = 0.1;// 0.5 means half speed... tap & release <y> to toggle precision speed
     public double RegularSpeed = 1.0;
     public boolean[] InvertControlsXY = {false,false};
     public double stickThreshold = 0.15;
-    public Gamepad commands = gamepad1; //The controller that clicks <start> <a> is gamepad 1
+    public boolean useGamepad1 = true; //The controller that clicks <start> <a> is gamepad 1 else use gamepad2
     //public boolean enableRecording = false;//Allow the user to reccord the gamepad inputs by toggling <start>
     //public boolean enablePlayback = false;//Allow the user to play the previously recorded inputs by pressing <guide>
 
@@ -65,20 +66,19 @@ public class HolonomicDriveReccord extends LinearOpMode {
 
         //=== Settings saved as part of the recording
         public Object[] recordingSettings= {PrecisionSpeed,RegularSpeed,stickThreshold,InvertControlsXY};
-
-        //=== Initial Motor fetch
-        public DcMotor[] AllMotors = {
-                hardwareMap.dcMotor.get(motorNames[0]),
-                hardwareMap.dcMotor.get(motorNames[1]),
-                hardwareMap.dcMotor.get(motorNames[2]),
-                hardwareMap.dcMotor.get(motorNames[3])
-        };
-
+        //===Initilize motors
+        public DcMotor[] AllMotors = new DcMotor[4];
         //=== Mapped Motor Storage
         public DcMotor[] MappedMotors = new DcMotor[4];
 
         //=== Custom Initilization method
         public void customInit(){
+            //=== Initial Motor fetch
+            this.AllMotors[0]= hardwareMap.dcMotor.get(motorNames[0]);
+            this.AllMotors[1]= hardwareMap.dcMotor.get(motorNames[1]);
+            this.AllMotors[2]= hardwareMap.dcMotor.get(motorNames[2]);
+            this.AllMotors[3]= hardwareMap.dcMotor.get(motorNames[3]);
+
             //=== Initilize mappings:
             for(int j=0;j<4;j++){
                 this.MappedMotors[j] = this.AllMotors[this.MotorMappings[j]];
@@ -123,14 +123,24 @@ public class HolonomicDriveReccord extends LinearOpMode {
             return abs(inputValue) > this.stickThreshold;
         }
 
+        //dynamic controle getter:
+        public Gamepad getCommands(){
+            if(this.useGamepad1){
+                return gamepad1;
+            }else{
+                return gamepad2;
+            }
+
+        }
+
         //== reccord the step:
         public void reccordStep(){
             Object[] stepFormatted = new Object[5];
-            stepFormatted[0] = this.commands.left_bumper;
-            stepFormatted[1] = this.commands.right_bumper;
-            stepFormatted[2] = this.commands.left_stick_x;
-            stepFormatted[3] = this.commands.left_stick_y;
-            stepFormatted[4] = this.commands.y;
+            stepFormatted[0] = this.getCommands().left_bumper;
+            stepFormatted[1] = this.getCommands().right_bumper;
+            stepFormatted[2] = this.getCommands().left_stick_x;
+            stepFormatted[3] = this.getCommands().left_stick_y;
+            stepFormatted[4] = this.getCommands().y;
 
             //save the object
             this.allSteps.add(stepFormatted);
@@ -149,13 +159,13 @@ public class HolonomicDriveReccord extends LinearOpMode {
         //=== Run the Loop
         while(opModeIsActive()){
             //=== Use Precision Modifier:
-            if(this.commands.y){
+            if(this.getCommands().y){
                 this.isPrecisionSpeed = !this.isPrecisionSpeed; // toggle precision speed by 'clicking' y
             }
 
             //=== Rotation Movement: left_bumper = CounterClockwise, right_bumper = Clockwise (Makes more sense than the reverse...)
-            if(this.eXOR(this.commands.left_bumper, this.commands.right_bumper)){
-                if(this.commands.right_bumper){// rotate Clockwise
+            if(this.eXOR(this.getCommands().left_bumper, this.getCommands().right_bumper)){
+                if(this.getCommands().right_bumper){// rotate Clockwise
                     double[] clockActivations = {1.0,1.0,-1.0,-1.0};
                     this.activateMotors(clockActivations,this.isPrecisionSpeed);
                 }else{ //if right is false than right must be true to meet the initial condition
@@ -165,8 +175,8 @@ public class HolonomicDriveReccord extends LinearOpMode {
             }
 
             //Redefine LEFT Stick Values (invert if settings say so):
-            double stick_x = this.InvertControlsXY[0] ? -this.commands.left_stick_x : this.commands.left_stick_x;
-            double stick_y = this.InvertControlsXY[1] ? -this.commands.left_stick_y : this.commands.left_stick_y;
+            double stick_x = this.InvertControlsXY[0] ? -this.getCommands().left_stick_x : this.getCommands().left_stick_x;
+            double stick_y = this.InvertControlsXY[1] ? -this.getCommands().left_stick_y : this.getCommands().left_stick_y;
 
             //=== Planar Movement XY
                 //=== Natural Inversion Config :

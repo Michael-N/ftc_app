@@ -33,8 +33,8 @@ public class HolonomicDrive extends LinearOpMode
         motorRightRear = hardwareMap.dcMotor.get("motorRightRear");
 
         //reverse two motors, may need to do left instead
-        motorRightFront.setDirection(DcMotor.Direction.REVERSE);
-        motorRightRear.setDirection(DcMotor.Direction.REVERSE);
+        motorLeftFront.setDirection(DcMotor.Direction.REVERSE);
+        motorLeftRear.setDirection(DcMotor.Direction.REVERSE);
 
 
         waitForStart();
