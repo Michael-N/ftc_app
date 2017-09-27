@@ -5,16 +5,6 @@ import static java.lang.Math.abs;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.Gamepad;
-import com.qualcomm.robotcore.hardware.HardwareMap;
-import java.util.ArrayList;
-/*
-import org.json.simple.JSONObject;
-import org.json.simple.JSONObject;
-import org.json.simple.JSONArray;
-import org.json.simple.parser.ParseException;
-import org.json.simple.parser.JSONParser;
-*/
-import java.io.*;
 
 /**
  * Created by Mike on 9/23/2017.
@@ -30,54 +20,26 @@ public class HolonomicDriveReccord extends LinearOpMode {
     public double RegularSpeed = 1.0;
     public boolean[] InvertControlsXY = {false,false};
     public double stickThreshold = 0.15;
+    public int toggleDelay = 7;//The toggle delay # of 20ms loops before accepting next toggle update
     public boolean useGamepad1 = true; //The controller that clicks <start> <a> is gamepad 1 else use gamepad2
-    //public boolean enableRecording = false;//Allow the user to reccord the gamepad inputs by toggling <start>
-    //public boolean enablePlayback = false;//Allow the user to play the previously recorded inputs by pressing <guide>
+    public boolean enableRecording = false;//Allow the user to reccord the gamepad inputs by toggling <start>
+    public boolean enablePlayback = false;//Allow the user to play the previously recorded inputs by pressing <guide>
 
     //=========== Initilizations ================
-        //Recording data storage:
-            /*      Outline:
-            *       -Save some of the settings in the json file
-            *            + Precision Speed
-            *            + Regular Speed
-            *            + Stick Threshold
-            *            + invertControlsXY
-            *       -apply those settings before running
-            *       -Save the UserGamepad input NOT the activationValues
-            *           +truncated gamepad object
-            *           + time @ step n after idle()  - time @ step n begin
-            *       -Program in the delay caused by idle()
-            *       -instant test playback by pressing <guide>
-            *       -load a reccording from a json file on the phone
-            *       - All Requirements:
-            *           import org.json.simple.JSONObject; // For JSON decoding and encoding
-            *           import org.json.simple.JSONObject;
-            *           import org.json.simple.JSONArray;
-            *           import org.json.simple.parser.ParseException;
-            *           import org.json.simple.parser.JSONParser;
-            *           import java.io.*; // For writing and reading the files
-            * */
-
         //Store the state of Precision Status:
         public boolean isPrecisionSpeed = false;
-
-        //~~~ this may cause a memory overflow for LONG recordings: consider streaming the json...
-        public ArrayList<Object> allSteps = new ArrayList<Object>();
-
-        //=== Settings saved as part of the recording
-        public Object[] recordingSettings= {PrecisionSpeed,RegularSpeed,stickThreshold,InvertControlsXY};
         //===Initilize motors
         public DcMotor[] AllMotors = new DcMotor[4];
         //=== Mapped Motor Storage
         public DcMotor[] MappedMotors = new DcMotor[4];
-
+        //=== the current status of the delay
+        public int toggleDelayState = 0;
         //=== Custom Initilization method
         public void customInit(){
             //=== Initial Motor fetch
-            this.AllMotors[0]= hardwareMap.dcMotor.get(motorNames[0]);
-            this.AllMotors[1]= hardwareMap.dcMotor.get(motorNames[1]);
-            this.AllMotors[2]= hardwareMap.dcMotor.get(motorNames[2]);
-            this.AllMotors[3]= hardwareMap.dcMotor.get(motorNames[3]);
+            for(int k=0;k<4;k++){
+                this.AllMotors[k]= hardwareMap.dcMotor.get(motorNames[k]);
+            }
 
             //=== Initilize mappings:
             for(int j=0;j<4;j++){
@@ -123,7 +85,7 @@ public class HolonomicDriveReccord extends LinearOpMode {
             return abs(inputValue) > this.stickThreshold;
         }
 
-        //dynamic controle getter:
+        //== dynamic controle getter:
         public Gamepad getCommands(){
             if(this.useGamepad1){
                 return gamepad1;
@@ -133,18 +95,18 @@ public class HolonomicDriveReccord extends LinearOpMode {
 
         }
 
-        //== reccord the step:
-        public void reccordStep(){
-            Object[] stepFormatted = new Object[5];
-            stepFormatted[0] = this.getCommands().left_bumper;
-            stepFormatted[1] = this.getCommands().right_bumper;
-            stepFormatted[2] = this.getCommands().left_stick_x;
-            stepFormatted[3] = this.getCommands().left_stick_y;
-            stepFormatted[4] = this.getCommands().y;
-
-            //save the object
-            this.allSteps.add(stepFormatted);
-
+        //== Allow a toggle update
+        public boolean toggleUpdatePermitted(){
+            //20 ms is not enough time for a human to release the button...
+            //this sets a delay between percieved toggle updates...
+            if(this.getCommands().y && ((this.toggleDelayState % this.toggleDelay) == 0)){
+                return true;
+            }else if (this.getCommands().y){
+                this.toggleDelayState += 1;
+                return false;
+            }else{
+                return false;
+            }
         }
 
     //=========== Run the Op Mode ===========
@@ -159,7 +121,7 @@ public class HolonomicDriveReccord extends LinearOpMode {
         //=== Run the Loop
         while(opModeIsActive()){
             //=== Use Precision Modifier:
-            if(this.getCommands().y){
+            if(this.getCommands().y && this.toggleUpdatePermitted()){
                 this.isPrecisionSpeed = !this.isPrecisionSpeed; // toggle precision speed by 'clicking' y
             }
 
