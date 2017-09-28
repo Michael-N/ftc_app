@@ -55,7 +55,10 @@ public class HolonomicDriveReccord extends LinearOpMode {
 
             }
         }
-
+        //=== the state of the reccoding
+        public boolean isReccording = false;
+        //=== Reccording Management
+        public reccordingManager observer = new reccordingManager();
 
     //===========  Helper Methods ===========
 
@@ -109,6 +112,30 @@ public class HolonomicDriveReccord extends LinearOpMode {
             }
         }
 
+        //== handle the intermediary reccording Logic
+        public void handleReccording(Gamepad inputCommands){
+            // Do the settings allow reccording
+            if(this.enableRecording){
+                //=== Permit a new reccording to begin
+                if(inputCommands.start){
+                    if(!this.isReccording){
+                        this.observer.start();
+                        this.isReccording = true;
+                    }else{
+                        // end and save the reccording
+                        this.observer.endAndSave();
+                        this.isReccording = false;
+                    }
+
+                }
+
+                //=== Observe:
+                if(this.isReccording){
+                    this.observer.observe(inputCommands);
+                }
+            }
+        }
+
     //=========== Run the Op Mode ===========
     public void runOpMode() throws InterruptedException{
 
@@ -120,14 +147,21 @@ public class HolonomicDriveReccord extends LinearOpMode {
 
         //=== Run the Loop
         while(opModeIsActive()){
+
+            //=== get the current commands
+            Gamepad currentCommands = this.getCommands();
+
+            //=== Manages start/stop reccording of the commands and their saving etc...
+            this.handleReccording(currentCommands);
+
             //=== Use Precision Modifier:
-            if(this.getCommands().y && this.toggleUpdatePermitted()){
+            if(currentCommands.y && this.toggleUpdatePermitted()){
                 this.isPrecisionSpeed = !this.isPrecisionSpeed; // toggle precision speed by 'clicking' y
             }
 
             //=== Rotation Movement: left_bumper = CounterClockwise, right_bumper = Clockwise (Makes more sense than the reverse...)
-            if(this.eXOR(this.getCommands().left_bumper, this.getCommands().right_bumper)){
-                if(this.getCommands().right_bumper){// rotate Clockwise
+            if(this.eXOR(currentCommands.left_bumper, currentCommands.right_bumper)){
+                if(currentCommands.right_bumper){// rotate Clockwise
                     double[] clockActivations = {1.0,1.0,-1.0,-1.0};
                     this.activateMotors(clockActivations,this.isPrecisionSpeed);
                 }else{ //if right is false than right must be true to meet the initial condition
@@ -137,8 +171,8 @@ public class HolonomicDriveReccord extends LinearOpMode {
             }
 
             //Redefine LEFT Stick Values (invert if settings say so):
-            double stick_x = this.InvertControlsXY[0] ? -this.getCommands().left_stick_x : this.getCommands().left_stick_x;
-            double stick_y = this.InvertControlsXY[1] ? -this.getCommands().left_stick_y : this.getCommands().left_stick_y;
+            double stick_x = this.InvertControlsXY[0] ? -currentCommands.left_stick_x : currentCommands.left_stick_x;
+            double stick_y = this.InvertControlsXY[1] ? -currentCommands.left_stick_y : currentCommands.left_stick_y;
 
             //=== Planar Movement XY
                 //=== Natural Inversion Config :
