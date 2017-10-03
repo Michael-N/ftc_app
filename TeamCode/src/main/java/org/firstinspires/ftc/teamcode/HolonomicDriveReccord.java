@@ -160,7 +160,7 @@ public class HolonomicDriveReccord extends LinearOpMode {
             }
 
             //=== Rotation Movement: left_bumper = CounterClockwise, right_bumper = Clockwise (Makes more sense than the reverse...)
-            if(this.eXOR(currentCommands.left_bumper, currentCommands.right_bumper)){
+            if(currentCommands.left_bumper || currentCommands.right_bumper){
                 if(currentCommands.right_bumper){// rotate Clockwise
                     double[] clockActivations = {1.0,1.0,-1.0,-1.0};
                     this.activateMotors(clockActivations,this.isPrecisionSpeed);
@@ -177,7 +177,7 @@ public class HolonomicDriveReccord extends LinearOpMode {
             //=== Planar Movement XY
                 //=== Natural Inversion Config :
                 double[] horozontalActivations = {-stick_x,stick_x,stick_x,-stick_x};
-                double[] verticalActivations = {-stick_x,-stick_x,-stick_x,-stick_x};
+                double[] verticalActivations = {-stick_y,-stick_y,-stick_y,-stick_y};
                 double[] stayStill = {0.0,0.0,0.0,0.0};
 
                 //== Movement Forewards & Reverse (vertical):
@@ -190,7 +190,8 @@ public class HolonomicDriveReccord extends LinearOpMode {
                 }
 
                 //== Movement STILL
-                if(!this.isAboveThreshold(stick_y) && !this.isAboveThreshold(stick_x)){
+                if((!this.isAboveThreshold(stick_y) && !this.isAboveThreshold(stick_x)) || (!currentCommands.left_bumper || !currentCommands.right_bumper)){
+                    // NEEDS WORK THIS IS THE CAUSE OF THE  slow motor speeds!!! CONSIDER REMOVING THE ENTIRE IF STATEMENT
                     this.activateMotors(stayStill,this.isPrecisionSpeed);
                 }
 
