@@ -160,7 +160,7 @@ public class HolonomicDriveReccord extends LinearOpMode {
             }
 
             //=== Rotation Movement: left_bumper = CounterClockwise, right_bumper = Clockwise (Makes more sense than the reverse...)
-            if(currentCommands.left_bumper || currentCommands.right_bumper){
+            if(this.eXOR(currentCommands.left_bumper,currentCommands.right_bumper)){
                 if(currentCommands.right_bumper){// rotate Clockwise
                     double[] clockActivations = {1.0,1.0,-1.0,-1.0};
                     this.activateMotors(clockActivations,this.isPrecisionSpeed);
@@ -189,11 +189,14 @@ public class HolonomicDriveReccord extends LinearOpMode {
                     this.activateMotors(horozontalActivations,this.isPrecisionSpeed);
                 }
 
+
+            /*
                 //== Movement STILL
-                if((!this.isAboveThreshold(stick_y) && !this.isAboveThreshold(stick_x)) || (!currentCommands.left_bumper || !currentCommands.right_bumper)){
+                if((!this.isAboveThreshold(stick_y) && !this.isAboveThreshold(stick_x)) || !(currentCommands.left_bumper || currentCommands.right_bumper)){
                     // NEEDS WORK THIS IS THE CAUSE OF THE  slow motor speeds!!! CONSIDER REMOVING THE ENTIRE IF STATEMENT
                     this.activateMotors(stayStill,this.isPrecisionSpeed);
                 }
+            */
 
             idle();
         }
