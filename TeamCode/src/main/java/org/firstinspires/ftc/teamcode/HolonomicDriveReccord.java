@@ -3,62 +3,126 @@ package org.firstinspires.ftc.teamcode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import static java.lang.Math.abs;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
+import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.Gamepad;
+import java.util.Calendar;
 
 /**
  * Created by Mike on 9/23/2017.
  */
 @TeleOp(name = "HolonomicDriveReccord")
 public class HolonomicDriveReccord extends LinearOpMode {
+    //=========== Controls Guide ==================
+    /*
+    *   Rotation: <Right-Bumper>= Clockwise
+    *             <Left-Bumper>= CounterClockwise
+    *
+    *   Precision: <y> = toggle precision/regular speed
+    *
+    *   Strafing (Horozontal):  <left-stick-x> = maped right to right and left to left unless controls setting invertControlsXY[0] is true
+    *
+    *   Forewards/Backwards (Vertical): <left-stick-y> maped up to forewards and down to backwards unless setting invertControlsXY[1] is true
+    *
+    *   ~~~Planed Features~~~
+    *   -servo
+    *   -reccording
+    *   -playback
+    *
+    * */
 
     //=========== Settings and Config ==============
-    public String[] motorNames = {"motorLeftFront","motorLeftRear","motorRightFront","motorRightRear"};
-    public int[] MotorMappings = {0,1,2,3};
-    public boolean[] MotorReverse = {true,true,false,false}; //applied after mappings--> corresponds to index of mapped motor
-    public double PrecisionSpeed = 0.1;// 0.5 means half speed... tap & release <y> to toggle precision speed
-    public double RegularSpeed = 1.0;
-    public boolean[] InvertControlsXY = {false,false};
-    public double stickThreshold = 0.15;
-    public int toggleDelay = 7;//The toggle delay # of 20ms loops before accepting next toggle update
-    public boolean useGamepad1 = true; //The controller that clicks <start> <a> is gamepad 1 else use gamepad2
-    public boolean enableRecording = false;//Allow the user to reccord the gamepad inputs by toggling <start>
-    public boolean enablePlayback = false;//Allow the user to play the previously recorded inputs by pressing <guide>
+        //=== Motors
+        public String[] motorNames = {"motorLeftFront","motorLeftRear","motorRightFront","motorRightRear"};
+        public int[] motorMappings = {0,1,2,3};
+        public boolean[] motorReverse = {true,true,false,false}; //applied after mappings--> corresponds to index of mapped motor
+        //=== Speed
+        public double precisionSpeed = 0.1;// 0.5 means half speed... tap & release <y> to toggle precision speed
+        public double regularSpeed = 1.0;
+        //=== Controls
+        public boolean[] invertControlsXY = {false,false};
+        public double stickThreshold = 0.15;
+        public int toggleDelay = 70;//the Number of Ms since the last successful toggle, to prevent the next toggle
+        public boolean useGamepad1 = true; //The controller that clicks <start> <a> is gamepad 1 else use gamepad2 <start> <b>
+        //=== Reccording
+        public boolean enableRecording = false;//Allow the user to reccord the gamepad inputs by toggling <start>
+        public int maxTimeReccording  = 600;// Time in Sec
+        //=== Servos
+        public String[] servoNames = {"servoRight"}; // Use: same as Motors Section above
+        public int[] servoMappings = {0};
+        public boolean[] servoReverse = {false};
+        //=== Playback
+        public boolean enablePlayback = false;//Allow the user to play the previously recorded inputs by pressing <guide>
 
-    //=========== Initilizations ================
-        //Store the state of Precision Status:
-        public boolean isPrecisionSpeed = false;
-        //===Initilize motors
-        public DcMotor[] AllMotors = new DcMotor[4];
-        //=== Mapped Motor Storage
-        public DcMotor[] MappedMotors = new DcMotor[4];
-        //=== the current status of the delay
-        public int toggleDelayState = 0;
-        //=== Custom Initilization method
-        public void customInit(){
-            //=== Initial Motor fetch
-            for(int k=0;k<4;k++){
-                this.AllMotors[k]= hardwareMap.dcMotor.get(motorNames[k]);
+    //=========== Helper Classes ================
+        //=== A toggle Class for True/False buttons
+        /*    use:
+                Toggleable yourButtonWithToggle = new Toggabable(Int DelayTimeInMs);
+                yourButtonWithToggle.toggled(boolean yourButton); // returns true if a change is permitted else false
+        */
+        public class Toggleable {
+            //Initilize toggleBegin etc..
+            private Long lastAllowedToggle = System.currentTimeMillis();
+            int delayMs;
+
+            //Initilize a setting
+            public Toggleable(int delayMs){
+                this.delayMs = delayMs;
             }
 
-            //=== Initilize mappings:
-            for(int j=0;j<4;j++){
-                this.MappedMotors[j] = this.AllMotors[this.MotorMappings[j]];
-            }
+            public boolean toggled(boolean gamepadButton){
+                //Initilize the first time
+                long testTime = System.currentTimeMillis();
 
-            //=== Initilize reverses
-            for( int i=0; i<4; i++){
-                //Reverses:
-                if(this.MotorReverse[i]){
-                    this.MappedMotors[i].setDirection(DcMotor.Direction.REVERSE);
+                //Has the delay time passed?
+                if(gamepadButton && (this.delayMs > (testTime-this.lastAllowedToggle))){
+                    //reset the time return true
+                    this.lastAllowedToggle = System.currentTimeMillis();
+                    return true;
+                }else{
+                    //do nothing
+                    return false;
                 }
 
             }
         }
-        //=== the state of the reccoding
+
+    //=========== Initilizations ================
+        //=== Motors
+        public DcMotor[] allMotors = new DcMotor[motorNames.length];//initial motor storage
+        public DcMotor[] mappedMotors = new DcMotor[motorNames.length];//mapped motor storage
+        //=== Speed
+        public boolean isPrecisionSpeed = false;//Store the state of Precision Status:
+        //=== Controls
+        public Toggleable y = new Toggleable(toggleDelay);//Y-Toggle (must use a seperate toggleable instance for each button)
+        //=== Reccording
         public boolean isReccording = false;
-        //=== Reccording Management
         public reccordingManager observer = new reccordingManager();
+        //=== Servos
+        public CRServo[] allServos = new CRServo[servoNames.length];//initial servo storage
+        public CRServo[] mappedServos = new CRServo[servoNames.length];//mapped servo storage
+
+        //=== Custom Init Method
+        public void customInit(){
+            //===== Motors
+                //=== Initial Motor fetch
+                for(int k=0;k<motorNames.length;k++){
+                    this.allMotors[k]= hardwareMap.dcMotor.get(motorNames[k]);
+                }
+                //=== Initilize mappings:
+                for(int j=0;j<motorNames.length;j++){
+                    this.mappedMotors[j] = this.allMotors[this.motorMappings[j]];
+                }
+                //=== Initilize reverses
+                for( int i=0; i<motorNames.length; i++){
+                    //Reverses:
+                    if(this.motorReverse[i]){
+                        this.mappedMotors[i].setDirection(DcMotor.Direction.REVERSE);
+                    }
+
+                }
+            //===== Servos
+        }
 
     //===========  Helper Methods ===========
 
@@ -67,16 +131,16 @@ public class HolonomicDriveReccord extends LinearOpMode {
             for(int k=0;k<4;k++){
                 if(usePrecision){
                     //multiply by setting
-                    this.MappedMotors[k].setPower(this.PrecisionSpeed*activationValues[k]);
+                    this.mappedMotors[k].setPower(this.precisionSpeed*activationValues[k]);
                 }else{
                     //multiply by setting
-                    this.MappedMotors[k].setPower(this.RegularSpeed*activationValues[k]);
+                    this.mappedMotors[k].setPower(this.regularSpeed*activationValues[k]);
                 }
 
             }
         }
 
-        //== logical or in the strictest sense
+        //== logical or in the strictest sense (the values must be opposites)
         public boolean eXOR(boolean x, boolean y) {// Courtesy of ~stack overflow~
             //works like or except if both  are true then it is false also
             return ( ( x || y ) && ! ( x && y ) );
@@ -88,28 +152,24 @@ public class HolonomicDriveReccord extends LinearOpMode {
             return abs(inputValue) > this.stickThreshold;
         }
 
-        //== dynamic controle getter:
+        //== dynamic control getter:
         public Gamepad getCommands(){
+            //Command Storage
+            Gamepad giveTheseCommands;
+
+            //This is where the commands are selected.... (usefull for reccording playback)
             if(this.useGamepad1){
-                return gamepad1;
+                giveTheseCommands = gamepad1;
             }else{
-                return gamepad2;
+                giveTheseCommands = gamepad2;
             }
 
-        }
+            //Modify the Toggle Buttons!!!!
+            giveTheseCommands.y = this.y.toggled(giveTheseCommands.y);// WARNING THAT PROPERTY MAY BE IMUTABLE!!!!! also playback should override this...
 
-        //== Allow a toggle update
-        public boolean toggleUpdatePermitted(){
-            //20 ms is not enough time for a human to release the button...
-            //this sets a delay between percieved toggle updates...
-            if(this.getCommands().y && ((this.toggleDelayState % this.toggleDelay) == 0)){
-                return true;
-            }else if (this.getCommands().y){
-                this.toggleDelayState += 1;
-                return false;
-            }else{
-                return false;
-            }
+            //Return the commands
+            return giveTheseCommands;
+
         }
 
         //== handle the intermediary reccording Logic
@@ -139,46 +199,49 @@ public class HolonomicDriveReccord extends LinearOpMode {
     //=========== Run the Op Mode ===========
     public void runOpMode() throws InterruptedException{
 
-        //Run the custom initilizations!
+        //======== Run the custom initilizations! ========
         this.customInit();
-
-        //=== Wait for Start
+        //======== Wait for Start ========
         waitForStart();
 
-        //=== Run the Loop
+        //======== Run the Loop ========
         while(opModeIsActive()){
 
-            //=== get the current commands
+            //=== get the current commands: abstractify controls instead of redefining...
             Gamepad currentCommands = this.getCommands();
 
             //=== Manages start/stop reccording of the commands and their saving etc...
             this.handleReccording(currentCommands);
 
             //=== Use Precision Modifier:
-            if(currentCommands.y && this.toggleUpdatePermitted()){
+            if(currentCommands.y){
                 this.isPrecisionSpeed = !this.isPrecisionSpeed; // toggle precision speed by 'clicking' y
             }
 
-            //=== Rotation Movement: left_bumper = CounterClockwise, right_bumper = Clockwise (Makes more sense than the reverse...)
+            //=== Rotation Movement:
+            /*
+                left_bumper = CounterClockwise, right_bumper = Clockwise
+            */
             if(this.eXOR(currentCommands.left_bumper,currentCommands.right_bumper)){
                 if(currentCommands.right_bumper){// rotate Clockwise
                     double[] clockActivations = {1.0,1.0,-1.0,-1.0};
                     this.activateMotors(clockActivations,this.isPrecisionSpeed);
-                }else{ //if right is false than right must be true to meet the initial condition
+                }else{ // rotate CounterClockwise
+                    //if right is false than right must be true to meet the initial condition
                     double[] cntrClockActivations = {-1.0,-1.0,1.0,1.0};
                     this.activateMotors(cntrClockActivations,this.isPrecisionSpeed);
                 }
             }
 
-            //Redefine LEFT Stick Values (invert if settings say so):
-            double stick_x = this.InvertControlsXY[0] ? -currentCommands.left_stick_x : currentCommands.left_stick_x;
-            double stick_y = this.InvertControlsXY[1] ? -currentCommands.left_stick_y : currentCommands.left_stick_y;
+            //=== Controls
+                //Redefine LEFT Stick Values (invert if settings say so):
+                double stick_x = this.invertControlsXY[0] ? -currentCommands.left_stick_x : currentCommands.left_stick_x;
+                double stick_y = this.invertControlsXY[1] ? -currentCommands.left_stick_y : currentCommands.left_stick_y;
 
             //=== Planar Movement XY
                 //=== Natural Inversion Config :
                 double[] horozontalActivations = {-stick_x,stick_x,stick_x,-stick_x};
                 double[] verticalActivations = {-stick_y,-stick_y,-stick_y,-stick_y};
-                double[] stayStill = {0.0,0.0,0.0,0.0};
 
                 //== Movement Forewards & Reverse (vertical):
                 if(this.isAboveThreshold(stick_y) && !this.isAboveThreshold(stick_x)){
@@ -188,15 +251,7 @@ public class HolonomicDriveReccord extends LinearOpMode {
                 if(this.isAboveThreshold(stick_x) && !this.isAboveThreshold(stick_y)){
                     this.activateMotors(horozontalActivations,this.isPrecisionSpeed);
                 }
-
-
-            /*
-                //== Movement STILL
-                if((!this.isAboveThreshold(stick_y) && !this.isAboveThreshold(stick_x)) || !(currentCommands.left_bumper || currentCommands.right_bumper)){
-                    // NEEDS WORK THIS IS THE CAUSE OF THE  slow motor speeds!!! CONSIDER REMOVING THE ENTIRE IF STATEMENT
-                    this.activateMotors(stayStill,this.isPrecisionSpeed);
-                }
-            */
+                //== Note: Do NOT create a stayStill function using 0 as all activation values: jittery motors...
 
             idle();
         }
