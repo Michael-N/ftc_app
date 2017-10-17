@@ -99,8 +99,8 @@ public class HolonomicDriveReccord extends LinearOpMode {
         public boolean isReccording = false;
         public reccordingManager observer = new reccordingManager();
         //=== Servos
-        public CRServo[] allServos = new CRServo[servoNames.length];//initial servo storage
-        public CRServo[] mappedServos = new CRServo[servoNames.length];//mapped servo storage
+        //public CRServo[] allServos = new CRServo[servoNames.length];//initial servo storage
+        //public CRServo[] mappedServos = new CRServo[servoNames.length];//mapped servo storage
 
         //=== Custom Init Method
         public void customInit(){
@@ -128,6 +128,19 @@ public class HolonomicDriveReccord extends LinearOpMode {
 
         //== Activates Motors with activationValues parameter and a precision parameter
         public void activateMotors(double[] activationValues,boolean usePrecision){
+            /*
+            * For settings configured as the following:
+            *
+            * public String[] motorNames = {"motorLeftFront","motorLeftRear","motorRightFront","motorRightRear"};
+            * public int[] motorMappings = {0,1,2,3};
+            *
+            *
+            * Robot Diagram is the index activation corresponds to:
+            *         top
+            *       1\\  //3
+            *               Right
+            *       2//  \\4
+            * */
             for(int k=0;k<4;k++){
                 if(usePrecision){
                     //multiply by setting
@@ -144,6 +157,16 @@ public class HolonomicDriveReccord extends LinearOpMode {
         public boolean eXOR(boolean x, boolean y) {// Courtesy of ~stack overflow~
             //works like or except if both  are true then it is false also
             return ( ( x || y ) && ! ( x && y ) );
+        }
+
+        //== Returns true if all the items in the list are false
+        public boolean allFalse(boolean[] vals){
+            for(int i=0; i<vals.length; i++){
+                if(vals[i]){
+                    return false;
+                }
+            }
+            return true;
         }
 
         //== Check if input is above threshold defined by the class settings
@@ -222,7 +245,8 @@ public class HolonomicDriveReccord extends LinearOpMode {
             /*
                 left_bumper = CounterClockwise, right_bumper = Clockwise
             */
-            if(this.eXOR(currentCommands.left_bumper,currentCommands.right_bumper)){
+            boolean doTurn = this.eXOR(currentCommands.left_bumper,currentCommands.right_bumper);
+            if(doTurn){
                 if(currentCommands.right_bumper){// rotate Clockwise
                     double[] clockActivations = {1.0,1.0,-1.0,-1.0};
                     this.activateMotors(clockActivations,this.isPrecisionSpeed);
@@ -239,19 +263,40 @@ public class HolonomicDriveReccord extends LinearOpMode {
                 double stick_y = this.invertControlsXY[1] ? -currentCommands.left_stick_y : currentCommands.left_stick_y;
 
             //=== Planar Movement XY
-                //=== Natural Inversion Config :
+                //=== Natural Inversion Config : see diagram in this.activateMotors method...
                 double[] horozontalActivations = {-stick_x,stick_x,stick_x,-stick_x};
                 double[] verticalActivations = {-stick_y,-stick_y,-stick_y,-stick_y};
 
                 //== Movement Forewards & Reverse (vertical):
-                if(this.isAboveThreshold(stick_y) && !this.isAboveThreshold(stick_x)){
+                boolean doForRev= this.isAboveThreshold(stick_y) && !this.isAboveThreshold(stick_x);
+                if(doForRev){
                     this.activateMotors(verticalActivations,this.isPrecisionSpeed);
                 }
                 //== Movement Strafe (horozontal):
-                if(this.isAboveThreshold(stick_x) && !this.isAboveThreshold(stick_y)){
+                boolean doHorz = this.isAboveThreshold(stick_x) && !this.isAboveThreshold(stick_y);
+                if(doHorz){
                     this.activateMotors(horozontalActivations,this.isPrecisionSpeed);
                 }
-                //== Note: Do NOT create a stayStill function using 0 as all activation values: jittery motors...
+            /*
+            //=== Planar Movement Diagonal
+                //=== Get commands
+                    double[] diagonalTopRightBackLeft = {};// spin perpendicular diagonal
+                    double[] diagonalTopLeftBackRight = {};
+                    boolean doDiagonal= (this.isAboveThreshold(stick_x) && this.isAboveThreshold(stick_y)) && (stick_x >0);
+                    //== / diagonal movement
+                    if(doDiagonal){
+                           // PLANNED CODE matrix cross / \ directions correspond to quadrent of stick past threshold y also
+                    }
+             */
+            //=== Stop Movement
+                //== Note: Do NOT create a stayStill function using 0 as all activation values: jittery motors... if if sttement bad
+                boolean[] willRunSequenceForOtherCommands = {doForRev,doHorz,doTurn};
+                double[] stopActivations = {0,0,0,0};
+
+                //== If all the other commands are false then therfore stop!
+                if(this.allFalse(willRunSequenceForOtherCommands)){
+                    this.activateMotors(stopActivations,this.isPrecisionSpeed);
+                }
 
             idle();
         }
