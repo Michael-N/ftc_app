@@ -150,9 +150,10 @@ public class HolonomicDriveReccord extends LinearOpMode {
             * or an alternate
             *
             * double y = tanh(1.0926*(abs(x)-0.5)) + 0.5;
+            * double y = tanh(5*(abs(x)-0.5)) + 0.5;        //my favorite
             *
             * */
-        double y = 0- log(1.36788 -abs(x));// derived from y=1 x=1 solve k   y = -ln(1-(x-k)) f(x) inverse without k is 1-e^-x
+        double y = tanh(5*(abs(x)-0.5)) + 0.5;;
         return (x/abs(x)) * y;
     }
 
