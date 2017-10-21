@@ -1,7 +1,7 @@
 package org.firstinspires.ftc.teamcode;
 
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
-import static java.lang.Math.abs;
+import static java.lang.Math.*;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotor;
@@ -277,20 +277,39 @@ public class HolonomicDriveReccord extends LinearOpMode {
                 if(doHorz){
                     this.activateMotors(horozontalActivations,this.isPrecisionSpeed);
                 }
-            /*
+
             //=== Planar Movement Diagonal
                 //=== Get commands
-                    double[] diagonalTopRightBackLeft = {};// spin perpendicular diagonal
-                    double[] diagonalTopLeftBackRight = {};
-                    boolean doDiagonal= (this.isAboveThreshold(stick_x) && this.isAboveThreshold(stick_y)) && (stick_x >0);
+                    boolean doDiagonal= this.isAboveThreshold(stick_x) && this.isAboveThreshold(stick_y);
+                    boolean diagonalOne = doDiagonal && (0<(stick_x * stick_y));// like the 4 quadrents in math -+ ++      + * + = +   -+ * +- = -
+                    boolean diagonalTwo = doDiagonal && (0>(stick_x*stick_y));//                                -- +-      - * - = +
+                    double normalizedU = sqrt(pow(0.7071*stick_x,2.0) + pow(0.7071*stick_y,2.0)) * (stick_y/abs(stick_y));
+                    /* ^above
+
+                    motor only accepts values [-1,1] and the diagonal movement must be responsive to both x & y rather the
+                    length of the vector <x,y>: denoted u, x,y are scalars which for which  |u|,|x|,|y| <= 1 so
+                    (ax)^2 + (ay)^2 <= |u|^2 , the y direction is still important so the final thing we want is
+                    |u|* (y/|y|) which gives us the y axis direction... solving a<= sqrt(0.5) approx: 0.7071
+
+                          U   /|
+                            /  |   y   if x,y = 1 |U| = sqrt(2) > 1 ---> err...
+                            ---
+                            x
+                    */
+                    double[] diagonalTopRightBackLeft = {0,normalizedU,normalizedU,0};// spin perpendicular diagonal
+                    double[] diagonalTopLeftBackRight = {normalizedU,0,0,normalizedU};
                     //== / diagonal movement
-                    if(doDiagonal){
-                           // PLANNED CODE matrix cross / \ directions correspond to quadrent of stick past threshold y also
+                    if(diagonalOne){
+                        this.activateMotors(diagonalTopLeftBackRight,this.isPrecisionSpeed);
                     }
-             */
+                    //== \ diagonal movement
+                    if(diagonalTwo){
+                            this.activateMotors(diagonalTopLeftBackRight,this.isPrecisionSpeed);
+                    }
+
             //=== Stop Movement
                 //== Note: Do NOT create a stayStill function using 0 as all activation values: jittery motors... if if sttement bad
-                boolean[] willRunSequenceForOtherCommands = {doForRev,doHorz,doTurn};
+                boolean[] willRunSequenceForOtherCommands = {doForRev,doHorz,doTurn,diagonalOne,diagonalTwo};
                 double[] stopActivations = {0,0,0,0};
 
                 //== If all the other commands are false then therfore stop!
