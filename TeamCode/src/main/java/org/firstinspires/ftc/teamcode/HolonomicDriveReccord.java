@@ -10,6 +10,8 @@ import java.util.Calendar;
 
 /**
  * Created by Mike on 9/23/2017.
+ *
+ * note to the user: documentation/help is provided as comments in the functions, methods, or sections
  */
 @TeleOp(name = "HolonomicDriveReccord")
 public class HolonomicDriveReccord extends LinearOpMode {
@@ -24,7 +26,11 @@ public class HolonomicDriveReccord extends LinearOpMode {
     *
     *   Forewards/Backwards (Vertical): <left-stick-y> maped up to forewards and down to backwards unless setting invertControlsXY[1] is true
     *
+    *   Diagonal: <left-stick-x><left-stick-y>
+    *
     *   ~~~Planed Features~~~
+    *   -add in encoder for motors 2,4 (back two motors) + option to toggle between using them and not
+    *   -work on auton mode...
     *   -servo
     *   -reccording
     *   -playback
@@ -296,11 +302,11 @@ public class HolonomicDriveReccord extends LinearOpMode {
                             ---
                             x
                     */
-                    double[] diagonalTopRightBackLeft = {0,normalizedU,normalizedU,0};// spin perpendicular diagonal
+                    double[] diagonalTopRightBackLeft = {0,normalizedU,normalizedU,0};// spin perpendicular diagonal wheels
                     double[] diagonalTopLeftBackRight = {normalizedU,0,0,normalizedU};
                     //== / diagonal movement
                     if(diagonalOne){
-                        this.activateMotors(diagonalTopLeftBackRight,this.isPrecisionSpeed);
+                        this.activateMotors(diagonalTopRightBackLeft,this.isPrecisionSpeed);
                     }
                     //== \ diagonal movement
                     if(diagonalTwo){
