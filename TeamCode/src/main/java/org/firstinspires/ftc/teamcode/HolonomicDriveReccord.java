@@ -131,6 +131,30 @@ public class HolonomicDriveReccord extends LinearOpMode {
         }
 
     //===========  Helper Methods ===========
+        //== Handle acceleration of input: how it is mapped across [-1,1]
+        public double accelerationCurve(double x){
+            /*
+            *   y = -ln(1.36788 -x)  for x in [0,1]  graph = concave /
+            *
+            *   input to this function will be [-1,1]
+            * == 3 Canidates ==
+            *
+            * double y = -log(1.36788 -abs(x));
+            *
+            *
+            * or an alternate in radians
+            *
+            * double y = sin(4*PI*abs(x));
+            *
+            *
+            * or an alternate
+            *
+            * double y = tanh(1.0926*(abs(x)-0.5)) + 0.5;
+            *
+            * */
+        double y = 0- log(1.36788 -abs(x));// derived from y=1 x=1 solve k   y = -ln(1-(x-k)) f(x) inverse without k is 1-e^-x
+        return (x/abs(x)) * y;
+    }
 
         //== Activates Motors with activationValues parameter and a precision parameter
         public void activateMotors(double[] activationValues,boolean usePrecision){
@@ -150,10 +174,10 @@ public class HolonomicDriveReccord extends LinearOpMode {
             for(int k=0;k<4;k++){
                 if(usePrecision){
                     //multiply by setting
-                    this.mappedMotors[k].setPower(this.precisionSpeed*activationValues[k]);
+                    this.mappedMotors[k].setPower(this.accelerationCurve(this.precisionSpeed*activationValues[k]));
                 }else{
                     //multiply by setting
-                    this.mappedMotors[k].setPower(this.regularSpeed*activationValues[k]);
+                    this.mappedMotors[k].setPower(this.accelerationCurve(this.regularSpeed*activationValues[k]));
                 }
 
             }
@@ -270,7 +294,7 @@ public class HolonomicDriveReccord extends LinearOpMode {
 
             //=== Planar Movement XY
                 //=== Natural Inversion Config : see diagram in this.activateMotors method...
-                double[] horozontalActivations = {-stick_x,stick_x,stick_x,-stick_x};
+                double[] horozontalActivations = {stick_x,-stick_x,-stick_x,stick_x};
                 double[] verticalActivations = {-stick_y,-stick_y,-stick_y,-stick_y};
 
                 //== Movement Forewards & Reverse (vertical):
@@ -302,8 +326,8 @@ public class HolonomicDriveReccord extends LinearOpMode {
                             ---
                             x
                     */
-                    double[] diagonalTopRightBackLeft = {0,normalizedU,normalizedU,0};// spin perpendicular diagonal wheels
-                    double[] diagonalTopLeftBackRight = {normalizedU,0,0,normalizedU};
+                    double[] diagonalTopRightBackLeft = {0,-normalizedU,-normalizedU,0};// spin perpendicular diagonal wheels
+                    double[] diagonalTopLeftBackRight = {-normalizedU,0,0,-normalizedU};
                     //== / diagonal movement
                     if(diagonalOne){
                         this.activateMotors(diagonalTopRightBackLeft,this.isPrecisionSpeed);
