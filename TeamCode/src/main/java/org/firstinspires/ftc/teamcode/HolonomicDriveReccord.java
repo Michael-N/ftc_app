@@ -6,7 +6,6 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.Gamepad;
-import java.util.Calendar;
 
 /**
  * Created by Mike on 9/23/2017.
@@ -128,6 +127,8 @@ public class HolonomicDriveReccord extends LinearOpMode {
 
                 }
             //===== Servos
+
+            //===== Wait For Start:
         }
 
     //===========  Helper Methods ===========
@@ -157,7 +158,7 @@ public class HolonomicDriveReccord extends LinearOpMode {
     }
 
         //== Activates Motors with activationValues parameter and a precision parameter
-        public void activateMotors(double[] activationValues,boolean usePrecision){
+        public void activateMotors(double[] activationValues){
             /*
             * For settings configured as the following:
             *
@@ -172,7 +173,7 @@ public class HolonomicDriveReccord extends LinearOpMode {
             *       2//  \\4
             * */
             for(int k=0;k<4;k++){
-                if(usePrecision){
+                if(this.isPrecisionSpeed){
                     //multiply by setting
                     this.mappedMotors[k].setPower(this.accelerationCurve(this.precisionSpeed*activationValues[k]));
                 }else{
@@ -218,7 +219,7 @@ public class HolonomicDriveReccord extends LinearOpMode {
             }
 
             //Modify the Toggle Buttons!!!!
-            giveTheseCommands.y = this.y.toggled(giveTheseCommands.y);// WARNING THAT PROPERTY MAY BE IMUTABLE!!!!! also playback should override this...
+            giveTheseCommands.y = this.y.toggled(giveTheseCommands.y);// playback should override this...
 
             //Return the commands
             return giveTheseCommands;
@@ -260,60 +261,20 @@ public class HolonomicDriveReccord extends LinearOpMode {
         //======== Run the Loop ========
         while(opModeIsActive()){
 
-            //=== get the current commands: abstractify controls instead of redefining...
-            Gamepad currentCommands = this.getCommands();
-
-            //=== Manages start/stop reccording of the commands and their saving etc...
-            this.handleReccording(currentCommands);
+            //=== Controls and Reccording
+            Gamepad currentCommands = this.getCommands();// get the current commands: abstractify controls instead of redefining...
+            this.handleReccording(currentCommands);// Manages start/stop reccording of the commands and their saving etc...
 
             //=== Use Precision Modifier:
             if(currentCommands.y){
                 this.isPrecisionSpeed = !this.isPrecisionSpeed; // toggle precision speed by 'clicking' y
             }
 
-            //=== Rotation Movement:
-            /*
-                left_bumper = CounterClockwise, right_bumper = Clockwise
-            */
-            boolean doTurn = this.eXOR(currentCommands.left_bumper,currentCommands.right_bumper);
-            if(doTurn){
-                if(currentCommands.right_bumper){// rotate Clockwise
-                    double[] clockActivations = {1.0,1.0,-1.0,-1.0};
-                    this.activateMotors(clockActivations,this.isPrecisionSpeed);
-                }else{ // rotate CounterClockwise
-                    //if right is false than right must be true to meet the initial condition
-                    double[] cntrClockActivations = {-1.0,-1.0,1.0,1.0};
-                    this.activateMotors(cntrClockActivations,this.isPrecisionSpeed);
-                }
-            }
-
-            //=== Controls
-                //Redefine LEFT Stick Values (invert if settings say so):
-                double stick_x = this.invertControlsXY[0] ? -currentCommands.left_stick_x : currentCommands.left_stick_x;
-                double stick_y = this.invertControlsXY[1] ? -currentCommands.left_stick_y : currentCommands.left_stick_y;
-
-            //=== Planar Movement XY
-                //=== Natural Inversion Config : see diagram in this.activateMotors method...
-                double[] horozontalActivations = {stick_x,-stick_x,-stick_x,stick_x};
-                double[] verticalActivations = {-stick_y,-stick_y,-stick_y,-stick_y};
-
-                //== Movement Forewards & Reverse (vertical):
-                boolean doForRev= this.isAboveThreshold(stick_y) && !this.isAboveThreshold(stick_x);
-                if(doForRev){
-                    this.activateMotors(verticalActivations,this.isPrecisionSpeed);
-                }
-                //== Movement Strafe (horozontal):
-                boolean doHorz = this.isAboveThreshold(stick_x) && !this.isAboveThreshold(stick_y);
-                if(doHorz){
-                    this.activateMotors(horozontalActivations,this.isPrecisionSpeed);
-                }
-
-            //=== Planar Movement Diagonal
-                //=== Get commands
-                    boolean doDiagonal= this.isAboveThreshold(stick_x) && this.isAboveThreshold(stick_y);
-                    boolean diagonalOne = doDiagonal && (0<(stick_x * stick_y));// like the 4 quadrents in math -+ ++      + * + = +   -+ * +- = -
-                    boolean diagonalTwo = doDiagonal && (0>(stick_x*stick_y));//                                -- +-      - * - = +
-                    double normalizedU = sqrt(pow(0.7071*stick_x,2.0) + pow(0.7071*stick_y,2.0)) * (stick_y/abs(stick_y));
+            //=== Initilization of activation computations
+                //=== Controls: Redefine LEFT Stick Values (invert if settings say so):
+                    double stick_x = this.invertControlsXY[0] ? -currentCommands.left_stick_x : currentCommands.left_stick_x;
+                    double stick_y = this.invertControlsXY[1] ? -currentCommands.left_stick_y : currentCommands.left_stick_y;
+                //=== Diagonal Movement Normalized
                     /* ^above
 
                     motor only accepts values [-1,1] and the diagonal movement must be responsive to both x & y rather the
@@ -326,25 +287,58 @@ public class HolonomicDriveReccord extends LinearOpMode {
                             ---
                             x
                     */
-                    double[] diagonalTopRightBackLeft = {0,-normalizedU,-normalizedU,0};// spin perpendicular diagonal wheels
-                    double[] diagonalTopLeftBackRight = {-normalizedU,0,0,-normalizedU};
-                    //== / diagonal movement
-                    if(diagonalOne){
-                        this.activateMotors(diagonalTopRightBackLeft,this.isPrecisionSpeed);
-                    }
-                    //== \ diagonal movement
-                    if(diagonalTwo){
-                            this.activateMotors(diagonalTopLeftBackRight,this.isPrecisionSpeed);
-                    }
+                    double normalizedU = sqrt(pow(0.7071*stick_x,2.0) + pow(0.7071*stick_y,2.0)) * (stick_y/abs(stick_y));
 
-            //=== Stop Movement
-                //== Note: Do NOT create a stayStill function using 0 as all activation values: jittery motors... if if sttement bad
-                boolean[] willRunSequenceForOtherCommands = {doForRev,doHorz,doTurn,diagonalOne,diagonalTwo};
+            //=== Activation Values
+                double[] clockActivations = {1.0,1.0,-1.0,-1.0};
+                double[] cntrClockActivations = {-1.0,-1.0,1.0,1.0};
+                double[] horozontalActivations = {stick_x,-stick_x,-stick_x,stick_x};
+                double[] verticalActivations = {-stick_y,-stick_y,-stick_y,-stick_y};
+                double[] diagonalTopRightBackLeft = {0,-normalizedU,-normalizedU,0};// spin perpendicular diagonal wheels
+                double[] diagonalTopLeftBackRight = {-normalizedU,0,0,-normalizedU};
                 double[] stopActivations = {0,0,0,0};
 
-                //== If all the other commands are false then therfore stop!
-                if(this.allFalse(willRunSequenceForOtherCommands)){
-                    this.activateMotors(stopActivations,this.isPrecisionSpeed);
+            //=== Command Conditions:
+                boolean doTurn = this.eXOR(currentCommands.left_bumper,currentCommands.right_bumper);// Clockwise and CounterClockwise Turn
+                boolean doForRev= this.isAboveThreshold(stick_y) && !this.isAboveThreshold(stick_x);// Forewards and Reverse
+                boolean doHorz = this.isAboveThreshold(stick_x) && !this.isAboveThreshold(stick_y);// Horozontal
+                boolean doDiagonal= this.isAboveThreshold(stick_x) && this.isAboveThreshold(stick_y);// Intermediary helper abstraction
+                boolean diagonalOne = doDiagonal && (0<(stick_x * stick_y));//  / diagonal movement
+                boolean diagonalTwo = doDiagonal && (0>(stick_x*stick_y));//    \ diagonal movement
+                boolean[] willRunSequenceForOtherCommands = {doForRev,doHorz,doTurn,diagonalOne,diagonalTwo};// Stop
+
+            //=== Rotation Movement: left_bumper = CounterClockwise, right_bumper = Clockwise
+                if(doTurn){
+                    if(currentCommands.right_bumper){// rotate Clockwise
+                        this.activateMotors(clockActivations);
+                    }else{ // rotate CounterClockwise
+                        //if right is false than right must be true to meet the initial condition
+                        this.activateMotors(cntrClockActivations);
+                    }
+                }
+
+            //=== Planar Movement XY
+
+                if(doForRev){//== Movement Forewards & Reverse (vertical):
+                    this.activateMotors(verticalActivations);
+                }
+
+                if(doHorz){//== Movement Strafe (horozontal):
+                    this.activateMotors(horozontalActivations);
+                }
+
+            //=== Planar Movement Diagonal
+                if(diagonalOne){//== / diagonal movement
+                    this.activateMotors(diagonalTopRightBackLeft);
+                }
+
+                if(diagonalTwo){//== \ diagonal movement
+                    this.activateMotors(diagonalTopLeftBackRight);
+                }
+
+            //=== Stop Movement
+                if(this.allFalse(willRunSequenceForOtherCommands)){//== If all the other commands are false then therfore stop!
+                    this.activateMotors(stopActivations);
                 }
 
             idle();
