@@ -41,6 +41,7 @@ public class HolonomicDriveReccord extends LinearOpMode {
         public String[] motorNames = {"motorLeftFront","motorLeftRear","motorRightFront","motorRightRear"};
         public int[] motorMappings = {0,1,2,3};
         public boolean[] motorReverse = {true,true,false,false}; //applied after mappings--> corresponds to index of mapped motor
+        public boolean useEncoders = false;
         //=== Speed
         public double precisionSpeed = 0.1;// 0.5 means half speed... tap & release <y> to toggle precision speed
         public double regularSpeed = 1.0;
@@ -128,34 +129,36 @@ public class HolonomicDriveReccord extends LinearOpMode {
                 }
             //===== Servos
 
-            //===== Wait For Start:
+            //======== Wait for Start ========
+            this.waitForStart();
+
         }
 
     //===========  Helper Methods ===========
         //== Handle acceleration of input: how it is mapped across [-1,1]
         public double accelerationCurve(double x){
             /*
-            *   y = -ln(1.36788 -x)  for x in [0,1]  graph = concave /
+            *   y_ = -ln(1.36788 -x)  for x in [0,1]  graph = concave /
             *
             *   input to this function will be [-1,1]
             * == 3 Canidates ==
             *
-            * double y = -log(1.36788 -abs(x));
+            * double y_ = -log(1.36788 -abs(x));
             *
             *
             * or an alternate in radians
             *
-            * double y = sin(4*PI*abs(x));
+            * double y_ = sin(4*PI*abs(x));
             *
             *
             * or an alternate
             *
-            * double y = tanh(1.0926*(abs(x)-0.5)) + 0.5;
-            * double y = tanh(5*(abs(x)-0.5)) + 0.5;        //my favorite
+            * double y_ = tanh(1.0926*(abs(x)-0.5)) + 0.5;
+            * double y_ = tanh(5*(abs(x)-0.5)) + 0.5;        //my favorite
             *
             * */
-        double y = tanh(5*(abs(x)-0.5)) + 0.5;;
-        return (x/abs(x)) * y;
+        double y_ = tanh(5*(abs(x)-0.5)) + 0.5;;
+        return (x/abs(x)) * y_;
     }
 
         //== Activates Motors with activationValues parameter and a precision parameter
@@ -222,6 +225,11 @@ public class HolonomicDriveReccord extends LinearOpMode {
             //Modify the Toggle Buttons!!!!
             giveTheseCommands.y = this.y.toggled(giveTheseCommands.y);// playback should override this...
 
+            //=== Use Precision Modifier:
+            if(giveTheseCommands.y){
+                this.isPrecisionSpeed = !this.isPrecisionSpeed; // toggle precision speed by 'clicking' y
+            }
+
             //Return the commands
             return giveTheseCommands;
 
@@ -256,8 +264,6 @@ public class HolonomicDriveReccord extends LinearOpMode {
 
         //======== Run the custom initilizations! ========
         this.customInit();
-        //======== Wait for Start ========
-        waitForStart();
 
         //======== Run the Loop ========
         while(opModeIsActive()){
@@ -265,12 +271,7 @@ public class HolonomicDriveReccord extends LinearOpMode {
             //=== Controls and Reccording
             Gamepad currentCommands = this.getCommands();// get the current commands: abstractify controls instead of redefining...
             this.handleReccording(currentCommands);// Manages start/stop reccording of the commands and their saving etc...
-
-            //=== Use Precision Modifier:
-            if(currentCommands.y){
-                this.isPrecisionSpeed = !this.isPrecisionSpeed; // toggle precision speed by 'clicking' y
-            }
-
+            
             //=== Initilization of activation computations
                 //=== Controls: Redefine LEFT Stick Values (invert if settings say so):
                     double stick_x = this.invertControlsXY[0] ? -currentCommands.left_stick_x : currentCommands.left_stick_x;
@@ -309,21 +310,17 @@ public class HolonomicDriveReccord extends LinearOpMode {
                 boolean[] willRunSequenceForOtherCommands = {doForRev,doHorz,doTurn,diagonalOne,diagonalTwo};// Stop
 
             //=== Rotation Movement: left_bumper = CounterClockwise, right_bumper = Clockwise
-                if(doTurn){
-                    if(currentCommands.right_bumper){// rotate Clockwise
-                        this.activateMotors(clockActivations);
-                    }else{ // rotate CounterClockwise
-                        //if right is false than right must be true to meet the initial condition
-                        this.activateMotors(cntrClockActivations);
-                    }
+                if(doTurn && currentCommands.right_bumper){// rotate Clockwise
+                    this.activateMotors(clockActivations);
+                }
+                if(doTurn && currentCommands.left_bumper){// rotate CounterClockwise
+                    this.activateMotors(cntrClockActivations);
                 }
 
             //=== Planar Movement XY
-
                 if(doForRev){//== Movement Forewards & Reverse (vertical):
                     this.activateMotors(verticalActivations);
                 }
-
                 if(doHorz){//== Movement Strafe (horozontal):
                     this.activateMotors(horozontalActivations);
                 }
@@ -332,7 +329,6 @@ public class HolonomicDriveReccord extends LinearOpMode {
                 if(diagonalOne){//== / diagonal movement
                     this.activateMotors(diagonalTopRightBackLeft);
                 }
-
                 if(diagonalTwo){//== \ diagonal movement
                     this.activateMotors(diagonalTopLeftBackRight);
                 }
