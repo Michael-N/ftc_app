@@ -102,6 +102,6 @@ public class registerTeamOpModes
     // manager.register("Telemetry",              ConceptTelemetry.class);
     // manager.register("Vuforia Navigation",     ConceptVuforiaNavigation.class);
     manager.register("HolonomicDrive", HolonomicDrive.class);
-    manager.register("HolonomicDriveReccord", HolonomicDriveReccord.class);
+    manager.register("HolonomicDriveRecord", HolonomicDriveRecord.class);
   }
 }

@@ -10,7 +10,7 @@ import com.qualcomm.robotcore.hardware.Gamepad;
 /**
  * Created by Mike on 9/27/2017.
  */
-public class reccordingManager {
+public class recordingManager {
     //Recording data storage:
             /*      Outline:
             *       -Save some of the settings in the json file

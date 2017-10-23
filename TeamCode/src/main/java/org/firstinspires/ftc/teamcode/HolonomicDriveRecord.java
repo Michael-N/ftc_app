@@ -12,8 +12,8 @@ import com.qualcomm.robotcore.hardware.Gamepad;
  *
  * note to the user: documentation/help is provided as comments in the functions, methods, or sections
  */
-@TeleOp(name = "HolonomicDriveReccord")
-public class HolonomicDriveReccord extends LinearOpMode {
+@TeleOp(name = "HolonomicDriveRecord")
+public class HolonomicDriveRecord extends LinearOpMode {
     //=========== Controls Guide ==================
     /*
     *   Rotation: <Right-Bumper>= Clockwise
@@ -21,9 +21,9 @@ public class HolonomicDriveReccord extends LinearOpMode {
     *
     *   Precision: <y> = toggle precision/regular speed
     *
-    *   Strafing (Horozontal):  <left-stick-x> = maped right to right and left to left unless controls setting invertControlsXY[0] is true
+    *   Strafing (Horizontal):  <left-stick-x> = mapped right to right and left to left unless controls setting invertControlsXY[0] is true
     *
-    *   Forewards/Backwards (Vertical): <left-stick-y> maped up to forewards and down to backwards unless setting invertControlsXY[1] is true
+    *   Forwards/Backwards (Vertical): <left-stick-y> mapped up to forwards and down to backwards unless setting invertControlsXY[1] is true
     *
     *   Diagonal: <left-stick-x><left-stick-y>
     *
@@ -49,9 +49,9 @@ public class HolonomicDriveReccord extends LinearOpMode {
         public boolean[] invertControlsXY = {false,false};
         public double stickThreshold = 0.15;
         public int toggleDelay = 70;//the Number of Ms since the last successful toggle, to prevent the next toggle
-        public boolean useGamepad1 = true; //The controller that clicks <start> <a> is gamepad 1 else use gamepad2 <start> <b>
+        public boolean useGamepad1 = true; //The controller that clicks <start> <a> is gamepad 1 else use gamepad 2 <start> <b>
         //=== Reccording
-        public boolean enableRecording = false;//Allow the user to reccord the gamepad inputs by toggling <start>
+        public boolean enableRecording = false;//Allow the user to record the gamepad inputs by toggling <start>
         public int maxTimeReccording  = 600;// Time in Sec
         //=== Servos
         public String[] servoNames = {"servoRight"}; // Use: same as Motors Section above
@@ -93,17 +93,17 @@ public class HolonomicDriveReccord extends LinearOpMode {
             }
         }
 
-    //=========== Initilizations ================
+    //=========== Initializations ================
         //=== Motors
         public DcMotor[] allMotors = new DcMotor[motorNames.length];//initial motor storage
         public DcMotor[] mappedMotors = new DcMotor[motorNames.length];//mapped motor storage
         //=== Speed
         public boolean isPrecisionSpeed = false;//Store the state of Precision Status:
         //=== Controls
-        public Toggleable y = new Toggleable(toggleDelay);//Y-Toggle (must use a seperate toggleable instance for each button)
-        //=== Reccording
-        public boolean isReccording = false;
-        public reccordingManager observer = new reccordingManager();
+        public Toggleable y = new Toggleable(toggleDelay);//Y-Toggle (must use a separate toggleable instance for each button)
+        //=== Recording
+        public boolean isRecording = false;
+        public recordingManager observer = new recordingManager();
         //=== Servos
         //public CRServo[] allServos = new CRServo[servoNames.length];//initial servo storage
         //public CRServo[] mappedServos = new CRServo[servoNames.length];//mapped servo storage
@@ -141,7 +141,7 @@ public class HolonomicDriveReccord extends LinearOpMode {
             *   y_ = -ln(1.36788 -x)  for x in [0,1]  graph = concave /
             *
             *   input to this function will be [-1,1]
-            * == 3 Canidates ==
+            * == 3 Candidates ==
             *
             * double y_ = -log(1.36788 -abs(x));
             *
@@ -215,7 +215,7 @@ public class HolonomicDriveReccord extends LinearOpMode {
             //Command Storage
             Gamepad giveTheseCommands;
 
-            //This is where the commands are selected.... (usefull for reccording playback)
+            //This is where the commands are selected.... (useful for recording playback)
             if(this.useGamepad1){
                 giveTheseCommands = gamepad1;
             }else{
@@ -235,25 +235,25 @@ public class HolonomicDriveReccord extends LinearOpMode {
 
         }
 
-        //== handle the intermediary reccording Logic
-        public void handleReccording(Gamepad inputCommands){
-            // Do the settings allow reccording
+        //== handle the intermediary recording Logic
+        public void handleRecording(Gamepad inputCommands){
+            // Do the settings allow recording
             if(this.enableRecording){
-                //=== Permit a new reccording to begin
+                //=== Permit a new recording to begin
                 if(inputCommands.start){
-                    if(!this.isReccording){
+                    if(!this.isRecording){
                         this.observer.start();
-                        this.isReccording = true;
+                        this.isRecording = true;
                     }else{
-                        // end and save the reccording
+                        // end and save the recording
                         this.observer.endAndSave();
-                        this.isReccording = false;
+                        this.isRecording = false;
                     }
 
                 }
 
                 //=== Observe:
-                if(this.isReccording){
+                if(this.isRecording){
                     this.observer.observe(inputCommands);
                 }
             }
@@ -262,17 +262,17 @@ public class HolonomicDriveReccord extends LinearOpMode {
     //=========== Run the Op Mode ===========
     public void runOpMode() throws InterruptedException{
 
-        //======== Run the custom initilizations! ========
+        //======== Run the custom initializations! ========
         this.customInit();
 
         //======== Run the Loop ========
         while(opModeIsActive()){
 
-            //=== Controls and Reccording
+            //=== Controls and Recording
             Gamepad currentCommands = this.getCommands();// get the current commands: abstractify controls instead of redefining...
-            this.handleReccording(currentCommands);// Manages start/stop reccording of the commands and their saving etc...
-            
-            //=== Initilization of activation computations
+            this.handleRecording(currentCommands);// Manages start/stop recording of the commands and their saving etc...
+
+            //=== Initialization of activation computations
                 //=== Controls: Redefine LEFT Stick Values (invert if settings say so):
                     double stick_x = this.invertControlsXY[0] ? -currentCommands.left_stick_x : currentCommands.left_stick_x;
                     double stick_y = this.invertControlsXY[1] ? -currentCommands.left_stick_y : currentCommands.left_stick_y;
@@ -280,7 +280,7 @@ public class HolonomicDriveReccord extends LinearOpMode {
                     /* ^above
 
                     motor only accepts values [-1,1] and the diagonal movement must be responsive to both x & y rather the
-                    length of the vector <x,y>: denoted u, x,y are scalars which for which  |u|,|x|,|y| <= 1 so
+                    length of the vector <x,y>: denoted u a vector, x,y are scalars and all for which  |u|,|x|,|y| <= 1 so
                     (ax)^2 + (ay)^2 <= |u|^2 , the y direction is still important so the final thing we want is
                     |u|* (y/|y|) which gives us the y axis direction... solving a<= sqrt(0.5) approx: 0.7071
 
@@ -301,27 +301,29 @@ public class HolonomicDriveReccord extends LinearOpMode {
                 double[] stopActivations = {0,0,0,0};
 
             //=== Command Conditions:
-                boolean doTurn = this.eXOR(currentCommands.left_bumper,currentCommands.right_bumper);// Clockwise and CounterClockwise Turn
-                boolean doForRev= this.isAboveThreshold(stick_y) && !this.isAboveThreshold(stick_x);// Forewards and Reverse
-                boolean doHorz = this.isAboveThreshold(stick_x) && !this.isAboveThreshold(stick_y);// Horozontal
+                boolean doTurn = this.eXOR(currentCommands.left_bumper,currentCommands.right_bumper);//intermediary abstraction
+                boolean doClockwise = doTurn && currentCommands.right_bumper;// Clockwise
+                boolean doCounterClockwise = doTurn && currentCommands.left_bumper;//CounterClockwise
+                boolean doForRev= this.isAboveThreshold(stick_y) && !this.isAboveThreshold(stick_x);// Forwards and Reverse
+                boolean doHorz = this.isAboveThreshold(stick_x) && !this.isAboveThreshold(stick_y);// Horizontal
                 boolean doDiagonal= this.isAboveThreshold(stick_x) && this.isAboveThreshold(stick_y);// Intermediary helper abstraction
                 boolean diagonalOne = doDiagonal && (0<(stick_x * stick_y));//  / diagonal movement
                 boolean diagonalTwo = doDiagonal && (0>(stick_x*stick_y));//    \ diagonal movement
                 boolean[] willRunSequenceForOtherCommands = {doForRev,doHorz,doTurn,diagonalOne,diagonalTwo};// Stop
 
             //=== Rotation Movement: left_bumper = CounterClockwise, right_bumper = Clockwise
-                if(doTurn && currentCommands.right_bumper){// rotate Clockwise
+                if(doClockwise){// rotate Clockwise
                     this.activateMotors(clockActivations);
                 }
-                if(doTurn && currentCommands.left_bumper){// rotate CounterClockwise
+                if(doCounterClockwise){// rotate CounterClockwise
                     this.activateMotors(cntrClockActivations);
                 }
 
             //=== Planar Movement XY
-                if(doForRev){//== Movement Forewards & Reverse (vertical):
+                if(doForRev){//== Movement Forwards & Reverse (vertical):
                     this.activateMotors(verticalActivations);
                 }
-                if(doHorz){//== Movement Strafe (horozontal):
+                if(doHorz){//== Movement Strafe (horizontal):
                     this.activateMotors(horozontalActivations);
                 }
 
