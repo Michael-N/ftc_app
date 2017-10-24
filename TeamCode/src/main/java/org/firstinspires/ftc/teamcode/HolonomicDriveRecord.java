@@ -170,10 +170,10 @@ public class HolonomicDriveRecord extends LinearOpMode {
             * or an alternate
             *
             * double y_ = tanh(1.0926*(abs(x)-0.5)) + 0.5;
-            * double y_ = tanh(5*(abs(x)-0.5)) + 0.5;        //my favorite
+            * double y_ = 0.5 tanh(k*(abs(x)-0.5)) + 0.5;        //my favorite where k=5
             *
             * */
-        double y_ = tanh(5*(abs(x)-0.5)) + 0.5;;
+        double y_ = 0.5* tanh(5*(abs(x)-0.5)) + 0.5;;
         return (x/abs(x)) * y_;
     }
 
