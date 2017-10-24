@@ -3,9 +3,9 @@ package org.firstinspires.ftc.teamcode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import static java.lang.Math.*;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
-import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.Gamepad;
+import com.qualcomm.robotcore.hardware.Servo;
 
 /**
  * Created by Mike on 9/23/2017.
@@ -41,7 +41,7 @@ public class HolonomicDriveRecord extends LinearOpMode {
         public String[] motorNames = {"motorLeftFront","motorLeftRear","motorRightFront","motorRightRear"};
         public int[] motorMappings = {0,1,2,3};
         public boolean[] motorReverse = {true,true,false,false}; //applied after mappings--> corresponds to index of mapped motor
-        public boolean useEncoders = false;
+        //public boolean useEncoders = false;
         //=== Speed
         public double precisionSpeed = 0.1;// 0.5 means half speed... tap & release <y> to toggle precision speed
         public double regularSpeed = 1.0;
@@ -57,6 +57,7 @@ public class HolonomicDriveRecord extends LinearOpMode {
         public String[] servoNames = {"servoRight"}; // Use: same as Motors Section above
         public int[] servoMappings = {0};
         public boolean[] servoReverse = {false};
+        public boolean clawInitialStateOpen = false;//sets whether the claw is positioned open -true- or closed -false- on startup
         //=== Playback
         public boolean enablePlayback = false;//Allow the user to play the previously recorded inputs by pressing <guide>
 
@@ -101,12 +102,13 @@ public class HolonomicDriveRecord extends LinearOpMode {
         public boolean isPrecisionSpeed = false;//Store the state of Precision Status:
         //=== Controls
         public Toggleable y = new Toggleable(toggleDelay);//Y-Toggle (must use a separate toggleable instance for each button)
+        public Toggleable x = new Toggleable(toggleDelay);
         //=== Recording
         public boolean isRecording = false;
         public recordingManager observer = new recordingManager();
         //=== Servos
-        //public CRServo[] allServos = new CRServo[servoNames.length];//initial servo storage
-        //public CRServo[] mappedServos = new CRServo[servoNames.length];//mapped servo storage
+        public Servo[] allServos = new Servo[servoNames.length];//initial servo storage
+        public Servo[] mappedServos = new Servo[servoNames.length];//mapped servo storage
 
         //=== Custom Init Method
         public void customInit(){
@@ -115,11 +117,11 @@ public class HolonomicDriveRecord extends LinearOpMode {
                 for(int k=0;k<motorNames.length;k++){
                     this.allMotors[k]= hardwareMap.dcMotor.get(motorNames[k]);
                 }
-                //=== Initilize mappings:
+                //=== Initialize mappings:
                 for(int j=0;j<motorNames.length;j++){
                     this.mappedMotors[j] = this.allMotors[this.motorMappings[j]];
                 }
-                //=== Initilize reverses
+                //=== Initialize reverses
                 for( int i=0; i<motorNames.length; i++){
                     //Reverses:
                     if(this.motorReverse[i]){
@@ -128,7 +130,21 @@ public class HolonomicDriveRecord extends LinearOpMode {
 
                 }
             //===== Servos
-
+                //=== Initial Servo fetch
+                for(int l=0;l<servoNames.length;l++){
+                    this.allServos[l] = hardwareMap.servo.get(servoNames[l]);
+                }
+                //=== Initialize mappings:
+                for(int p=0;p<servoNames.length;p++){
+                    this.mappedServos[p] = this.allServos[this.servoMappings[p]];
+                }
+                //=== Initialize Reverses
+                for(int r=0;r<servoNames.length;r++){
+                    //Reverses:
+                    if(this.servoReverse[r]){
+                        this.mappedServos[r].setDirection(Servo.Direction.REVERSE);
+                    }
+                }
             //======== Wait for Start ========
             this.waitForStart();
 
@@ -176,7 +192,7 @@ public class HolonomicDriveRecord extends LinearOpMode {
             *               Right
             *       2//  \\4
             * */
-            for(int k=0;k<4;k++){
+            for(int k=0;k<activationValues.length;k++){
                 if(this.isPrecisionSpeed){
                     //multiply by setting
                     this.mappedMotors[k].setPower(this.accelerationCurve(this.precisionSpeed*activationValues[k]));
@@ -185,6 +201,13 @@ public class HolonomicDriveRecord extends LinearOpMode {
                     this.mappedMotors[k].setPower(this.accelerationCurve(this.regularSpeed*activationValues[k]));
                 }
 
+            }
+        }
+
+        //== Activates Servos with POSITION values as a list:
+        public void activateServos(double[] activationValues){
+            for(int k=0;k<activationValues.length;k++){
+                this.mappedServos[k].setPosition(activationValues[k]);
             }
         }
 
@@ -224,6 +247,7 @@ public class HolonomicDriveRecord extends LinearOpMode {
 
             //Modify the Toggle Buttons!!!!
             giveTheseCommands.y = this.y.toggled(giveTheseCommands.y);// playback should override this...
+            giveTheseCommands.x = this.x.toggled(giveTheseCommands.x);
 
             //=== Use Precision Modifier:
             if(giveTheseCommands.y){
@@ -273,6 +297,8 @@ public class HolonomicDriveRecord extends LinearOpMode {
             this.handleRecording(currentCommands);// Manages start/stop recording of the commands and their saving etc...
 
             //=== Initialization of activation computations
+                //=== Claw State
+                    boolean clawIsOpen = clawInitialStateOpen;
                 //=== Controls: Redefine LEFT Stick Values (invert if settings say so):
                     double stick_x = this.invertControlsXY[0] ? -currentCommands.left_stick_x : currentCommands.left_stick_x;
                     double stick_y = this.invertControlsXY[1] ? -currentCommands.left_stick_y : currentCommands.left_stick_y;
@@ -291,16 +317,20 @@ public class HolonomicDriveRecord extends LinearOpMode {
                     */
                     double normalizedU = sqrt(pow(0.7071*stick_x,2.0) + pow(0.7071*stick_y,2.0)) * (stick_y/abs(stick_y));
 
-            //=== Activation Values
+            //=== Activation Values Motors
                 double[] clockActivations = {1.0,1.0,-1.0,-1.0};
                 double[] cntrClockActivations = {-1.0,-1.0,1.0,1.0};
-                double[] horozontalActivations = {stick_x,-stick_x,-stick_x,stick_x};
+                double[] horizontalActivations = {stick_x,-stick_x,-stick_x,stick_x};
                 double[] verticalActivations = {-stick_y,-stick_y,-stick_y,-stick_y};
                 double[] diagonalTopRightBackLeft = {0,-normalizedU,-normalizedU,0};// spin perpendicular diagonal wheels
                 double[] diagonalTopLeftBackRight = {-normalizedU,0,0,-normalizedU};
                 double[] stopActivations = {0,0,0,0};
 
-            //=== Command Conditions:
+            //=== Activation Positions Servos
+                double[] clawOpenActivations = {1};//corresponds to 180 deg??
+                double[] clawClosedActivations= {0};
+
+            //=== Command Conditions Motors:
                 boolean doTurn = this.eXOR(currentCommands.left_bumper,currentCommands.right_bumper);//intermediary abstraction
                 boolean doClockwise = doTurn && currentCommands.right_bumper;// Clockwise
                 boolean doCounterClockwise = doTurn && currentCommands.left_bumper;//CounterClockwise
@@ -310,6 +340,11 @@ public class HolonomicDriveRecord extends LinearOpMode {
                 boolean diagonalOne = doDiagonal && (0<(stick_x * stick_y));//  / diagonal movement
                 boolean diagonalTwo = doDiagonal && (0>(stick_x*stick_y));//    \ diagonal movement
                 boolean[] willRunSequenceForOtherCommands = {doForRev,doHorz,doTurn,diagonalOne,diagonalTwo};// Stop
+
+            //=== Command Conditions Servos:
+                boolean doClawOpen = currentCommands.x && !clawIsOpen;// open if toggled and the claw is not open
+                boolean doClawClose = currentCommands.x && clawIsOpen;
+
 
             //=== Rotation Movement: left_bumper = CounterClockwise, right_bumper = Clockwise
                 if(doClockwise){// rotate Clockwise
@@ -324,7 +359,7 @@ public class HolonomicDriveRecord extends LinearOpMode {
                     this.activateMotors(verticalActivations);
                 }
                 if(doHorz){//== Movement Strafe (horizontal):
-                    this.activateMotors(horozontalActivations);
+                    this.activateMotors(horizontalActivations);
                 }
 
             //=== Planar Movement Diagonal
@@ -338,6 +373,14 @@ public class HolonomicDriveRecord extends LinearOpMode {
             //=== Stop Movement
                 if(this.allFalse(willRunSequenceForOtherCommands)){//== If all the other commands are false then therfore stop!
                     this.activateMotors(stopActivations);
+                }
+
+            //=== Claw Movement
+                if(doClawOpen){
+                    this.activateServos(clawOpenActivations);
+                }
+                if(doClawClose){
+                    this.activateServos(clawClosedActivations);
                 }
 
             idle();
