@@ -42,22 +42,23 @@ public class HolonomicDriveRecord extends LinearOpMode {
         public int[] motorMappings = {0,1,2,3};
         public boolean[] motorReverse = {true,true,false,false}; //applied after mappings--> corresponds to index of mapped motor
         //public boolean useEncoders = false;
+        //=== Servos
+        public String[] servoNames = {"servoRight","servoLeft"}; // Use: same as Motors Section above
+        public int[] servoMappings = {0,1};
+        public boolean[] servoReverse = {false,true};
+        public boolean clawInitialStateOpen = true;//sets whether the claw is positioned open: both servos should be at 0 deg  -true- or closed -false- on startup
+
         //=== Speed
         public double precisionSpeed = 0.1;// 0.5 means half speed... tap & release <y> to toggle precision speed
         public double regularSpeed = 1.0;
         //=== Controls
         public boolean[] invertControlsXY = {false,false};
-        public double stickThreshold = 0.15;
-        public int toggleDelay = 70;//the Number of Ms since the last successful toggle, to prevent the next toggle
+        public double stickThreshold = 0.18;
+        public int toggleDelay = 40;//the Number of Ms since the last successful toggle, to prevent the next toggle
         public boolean useGamepad1 = true; //The controller that clicks <start> <a> is gamepad 1 else use gamepad 2 <start> <b>
         //=== Reccording
         public boolean enableRecording = false;//Allow the user to record the gamepad inputs by toggling <start>
         public int maxTimeReccording  = 600;// Time in Sec
-        //=== Servos
-        public String[] servoNames = {"servoRight"}; // Use: same as Motors Section above
-        public int[] servoMappings = {0};
-        public boolean[] servoReverse = {false};
-        public boolean clawInitialStateOpen = false;//sets whether the claw is positioned open -true- or closed -false- on startup
         //=== Playback
         public boolean enablePlayback = false;//Allow the user to play the previously recorded inputs by pressing <guide>
 
@@ -82,7 +83,7 @@ public class HolonomicDriveRecord extends LinearOpMode {
                 long testTime = System.currentTimeMillis();
 
                 //Has the delay time passed?
-                if(gamepadButton && (this.delayMs > (testTime-this.lastAllowedToggle))){
+                if(gamepadButton && (this.delayMs < (testTime-this.lastAllowedToggle))){
                     //reset the time return true
                     this.lastAllowedToggle = System.currentTimeMillis();
                     return true;
@@ -109,6 +110,7 @@ public class HolonomicDriveRecord extends LinearOpMode {
         //=== Servos
         public Servo[] allServos = new Servo[servoNames.length];//initial servo storage
         public Servo[] mappedServos = new Servo[servoNames.length];//mapped servo storage
+        public boolean clawIsOpen;
 
         //=== Custom Init Method
         public void customInit(){
@@ -129,6 +131,8 @@ public class HolonomicDriveRecord extends LinearOpMode {
                     }
 
                 }
+            //=== Claw State
+                this.clawIsOpen = clawInitialStateOpen;
             //===== Servos
                 //=== Initial Servo fetch
                 for(int l=0;l<servoNames.length;l++){
@@ -153,6 +157,7 @@ public class HolonomicDriveRecord extends LinearOpMode {
     //===========  Helper Methods ===========
         //== Handle acceleration of input: how it is mapped across [-1,1]
         public double accelerationCurve(double x){
+            double decimalPlacesToRoundTo = 2.0;
             /*
             *   y_ = -ln(1.36788 -x)  for x in [0,1]  graph = concave /
             *
@@ -164,17 +169,22 @@ public class HolonomicDriveRecord extends LinearOpMode {
             *
             * or an alternate in radians
             *
-            * double y_ = sin(4*PI*abs(x));
             *
+            * double y_ =0.5*sin(PI*(abs(x)-0.5)) +0.5;
             *
             * or an alternate
             *
             * double y_ = tanh(1.0926*(abs(x)-0.5)) + 0.5;
-            * double y_ = 0.5 tanh(k*(abs(x)-0.5)) + 0.5;        //my favorite where k=5
+            * double y_ = 0.5*tanh(k*(abs(x)-0.5)) + 0.5;  // my favorite
             *
             * */
-        double y_ = 0.5* tanh(5*(abs(x)-0.5)) + 0.5;;
-        return (x/abs(x)) * y_;
+        //== The base equation: be sure to be careful with domain and range d: [-1,1] range: [0,1]
+        double y_ = 0.5*tanh(5*(abs(x)-0.5)) + 0.5;
+        //== This extends the range to be [-1,1] uniformly for the behavior in the 1st quadrant
+        double vectorized = (x/abs(x)) * y_;
+
+        //rounding makes discritizizes the numbers enabling the tanh equation to actually reach y=1 for x=1 not y=0.993
+        return round(vectorized*pow(10,decimalPlacesToRoundTo))/pow(10,decimalPlacesToRoundTo);
     }
 
         //== Activates Motors with activationValues parameter and a precision parameter
@@ -296,13 +306,11 @@ public class HolonomicDriveRecord extends LinearOpMode {
             Gamepad currentCommands = this.getCommands();// get the current commands: abstractify controls instead of redefining...
             this.handleRecording(currentCommands);// Manages start/stop recording of the commands and their saving etc...
 
-            //=== Initialization of activation computations
-                //=== Claw State
-                    boolean clawIsOpen = clawInitialStateOpen;
+            //=== Activation computations (NOTE! README: these are redefined for each iteration of the loop!!!!!! )
                 //=== Controls: Redefine LEFT Stick Values (invert if settings say so):
                     double stick_x = this.invertControlsXY[0] ? -currentCommands.left_stick_x : currentCommands.left_stick_x;
                     double stick_y = this.invertControlsXY[1] ? -currentCommands.left_stick_y : currentCommands.left_stick_y;
-                //=== Diagonal Movement Normalized
+                //=== Diagonal Movement Normalized:
                     /* ^above
 
                     motor only accepts values [-1,1] and the diagonal movement must be responsive to both x & y rather the
@@ -327,8 +335,8 @@ public class HolonomicDriveRecord extends LinearOpMode {
                 double[] stopActivations = {0,0,0,0};
 
             //=== Activation Positions Servos
-                double[] clawOpenActivations = {1};//corresponds to 180 deg??
-                double[] clawClosedActivations= {0};
+                double[] clawOpenActivations = {1,1};//corresponds to 180 deg : Desired: 100deg ~ 5/9
+                double[] clawClosedActivations= {0,0};
 
             //=== Command Conditions Motors:
                 boolean doTurn = this.eXOR(currentCommands.left_bumper,currentCommands.right_bumper);//intermediary abstraction
@@ -342,8 +350,8 @@ public class HolonomicDriveRecord extends LinearOpMode {
                 boolean[] willRunSequenceForOtherCommands = {doForRev,doHorz,doTurn,diagonalOne,diagonalTwo};// Stop
 
             //=== Command Conditions Servos:
-                boolean doClawOpen = currentCommands.x && !clawIsOpen;// open if toggled and the claw is not open
-                boolean doClawClose = currentCommands.x && clawIsOpen;
+                boolean doClawOpen = currentCommands.x && !this.clawIsOpen;// open if toggled and the claw is not open
+                boolean doClawClose = currentCommands.x && this.clawIsOpen;
 
 
             //=== Rotation Movement: left_bumper = CounterClockwise, right_bumper = Clockwise
@@ -376,11 +384,13 @@ public class HolonomicDriveRecord extends LinearOpMode {
                 }
 
             //=== Claw Movement
-                if(doClawOpen){
+                if(doClawOpen){//=== Claw Open
                     this.activateServos(clawOpenActivations);
+                    this.clawIsOpen = !this.clawIsOpen;
                 }
-                if(doClawClose){
+                if(doClawClose){//=== Claw Close
                     this.activateServos(clawClosedActivations);
+                    this.clawIsOpen = !this.clawIsOpen;// is used in the loop...
                 }
 
             idle();
