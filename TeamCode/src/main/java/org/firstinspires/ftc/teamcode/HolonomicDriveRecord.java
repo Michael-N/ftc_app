@@ -4,7 +4,6 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import static java.lang.Math.*;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
-import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.hardware.Servo;
 
@@ -28,15 +27,26 @@ public class HolonomicDriveRecord extends LinearOpMode {
     *
     *   Diagonal: <left-stick-x><left-stick-y>
     *
+    *   Claw: open/close QUICKLY tap <x> to toggle open/closed
+    *
+    *   LinearSlide: <dpadUp> to move the slide upwards and <dpadDown> downwards
+    *
     *   ~~~Planed Features~~~
     *   -add in encoder for motors 2,4 (back two motors) + option to toggle between using them and not
     *   -work on auton mode...
-    *   -servo
     *   -reccording
     *   -playback
     *
     * */
 
+    /*
+    * Note: add in diagonal threshold
+    *       add in customizable speeds for turning
+    *       add in variable speed
+    *       add in rotation smoothing
+    *       KEEP the acceleration curve function
+    *       add in diagonal smoothing...
+    * */
     //=========== Settings and Config ==============
         //=== Motors for Wheels
         public String[] motorNames = {"motorLeftFront","motorLeftRear","motorRightFront","motorRightRear"};
@@ -46,32 +56,37 @@ public class HolonomicDriveRecord extends LinearOpMode {
         //=== Motor for Linear slide:
         public String linearSlideMotorName = "linearSlide";
         public boolean linearSlideReverse = false;
-
-
         //public boolean useEncoders = false;
+
         //=== Servos
         public String[] servoNames = {"servoRight","servoLeft"}; // Use: same as Motors Section above
         public int[] servoMappings = {0,1};
         public boolean[] servoReverse = {false,true};
         public boolean clawInitialStateOpen = true;//sets whether the claw is positioned open: both servos should be at 0 deg  -true- or closed -false- on startup
+
         //=== Speed
         public double precisionSpeed = 0.5;//  % of max speed as fraction:  tap & release <y> to toggle precision speed
         public double regularSpeed = 0.8;// % of max speed as a fraction
-        public double turningSpeed = 0.5;// is a fraction of the CURRENT speed applied to the motors whether regular or precision
-        public double linearSlideSpeed = 0.5;// independant of all other speeds and precision modes
+        public double turningSpeed = 0.;// is a fraction of the CURRENT speed applied to the motors whether regular or precision
+        public double linearSlideSpeed = 0.5;// independent of all other speeds and precision modes
+
         //=== Controls
         public boolean[] invertControlsXY = {false,false};
+        public String[] makeToggleable = {"x","y"};// not significant since the toggle is  done bt index not index value.. mearly asthetic...
+        public int[] toggleDelays = {1600,900};// toggle delays for claw and precisionSpeed of the robot
         public double stickThreshold = 0.18;//threshold for vertical and horizontal movement
         public double diagonalThreshold = 0.24;// threshold for diagonal movement
-        public int toggleDelay = 900;//the Number of Ms since the last successful toggle, to prevent the next toggle
-        public int toggleDelayPrecisionSpeed = 900;// toggle for <y> for precision speed
-        public int toggleDelayClaw = 1600;// toggle for the claw <x>
         public boolean useGamepad1 = true; //The controller that clicks <start> <a> is gamepad 1 else use gamepad 2 <start> <b>
+
         //=== Reccording
         public boolean enableRecording = false;//Allow the user to record the gamepad inputs by toggling <start>
         public int maxTimeReccording  = 600;// Time in Sec
+
         //=== Playback
         public boolean enablePlayback = false;//Allow the user to play the previously recorded inputs by pressing <guide>
+        public boolean useMostRecentPlayback = true; // IF this is false then the code will look at the useThisFileForPlayback string
+        public String useThisFileForPlayback  = "";
+        public boolean allowPlaybackInterupt = false;
 
     //=========== Helper Classes ================
         //=== A toggle Class for True/False buttons
@@ -114,8 +129,7 @@ public class HolonomicDriveRecord extends LinearOpMode {
         //=== Speed State
         public boolean isPrecisionSpeed = false;//Store the state of Precision Status:
         //=== Controls
-        public Toggleable y = new Toggleable(toggleDelay);//Y-Toggle (must use a separate toggleable instance for each button)
-        public Toggleable x = new Toggleable(toggleDelay);
+        public Toggleable[] allToggleables = new Toggleable[makeToggleable.length];
         //=== Recording State
         public boolean isRecording = false;
         public recordingManager observer = new recordingManager();
@@ -126,6 +140,10 @@ public class HolonomicDriveRecord extends LinearOpMode {
 
         //=== Custom Init Method
         public void customInit(){
+            //===== Toggleables
+            for(int e=0; e<makeToggleable.length;e++){
+                this.allToggleables[e] = new Toggleable(this.toggleDelays[e]);
+            }
             //===== Motors
                 //=== Initial Motor fetch
                 for(int k=0;k<motorNames.length;k++){
@@ -172,6 +190,7 @@ public class HolonomicDriveRecord extends LinearOpMode {
         }
 
     //===========  Helper Methods ===========
+        //===== Misc. methods
         //== Handle acceleration of input: how it is mapped across [-1,1]
         public double accelerationCurve(double x){
             double decimalPlacesToRoundTo = 2.0;
@@ -203,7 +222,14 @@ public class HolonomicDriveRecord extends LinearOpMode {
         //rounding makes discritizizes the numbers enabling the tanh equation to actually reach y=1 for x=1 not y=0.993
         return round(vectorized*pow(10,decimalPlacesToRoundTo))/pow(10,decimalPlacesToRoundTo);
     }
+        //== Check if input is above threshold defined by the class settings
+        public boolean isAboveThreshold(double inputValue,double thresholdValue){
 
+        //Returns true/false
+        return abs(inputValue) > thresholdValue;
+    }
+
+        //===== Hardware methods
         //== Activates Motors with activationValues parameter and a precision parameter
         public void activateMotors(double[] activationValues){
             /*
@@ -230,25 +256,24 @@ public class HolonomicDriveRecord extends LinearOpMode {
 
             }
         }
-
         //==Activate linear Slide Motor
         public void  activateSlide(double activationValue){
             this.linearSlideMotor.setPower(this.linearSlideSpeed*activationValue);
         }
-
         //== Activates Servos with POSITION values as a list:
         public void activateServos(double[] activationValues){
             for(int k=0;k<activationValues.length;k++){
-                this.mappedServos[k].setPosition(activationValues[k]);
+                double activationScaledFromDeg = activationValues[k]/180;
+                this.mappedServos[k].setPosition(activationScaledFromDeg);
             }
         }
 
+        //===== Logical methods
         //== logical or in the strictest sense (the values must be opposites)
         public boolean eXOR(boolean x, boolean y) {// Courtesy of ~stack overflow~
             //works like or except if both  are true then it is false also
             return ( ( x || y ) && ! ( x && y ) );
         }
-
         //== Returns true if all the items in the list are false
         public boolean allFalse(boolean[] vals){
             for(int i=0; i<vals.length; i++){
@@ -259,28 +284,52 @@ public class HolonomicDriveRecord extends LinearOpMode {
             return true;
         }
 
-        //== Check if input is above threshold defined by the class settings
-        public boolean isAboveThreshold(double inputValue,double thresholdValue){
+        //===== Playback and Recording methods
+        //== handle the intermediary recording Logic
+        public void handleRecording(Gamepad inputCommands){
+        // Do the settings allow recording
+        if(this.enableRecording){
+            //=== Permit a new recording to begin
+            if(inputCommands.start){
+                if(!this.isRecording){
+                    this.observer.start();
+                    this.isRecording = true;
+                }else{
+                    // end and save the recording
+                    this.observer.endAndSave();
+                    this.isRecording = false;
+                }
 
-            //Returns true/false
-            return abs(inputValue) > thresholdValue;
+            }
+
+            //=== Observe:
+            if(this.isRecording){
+                this.observer.observe(inputCommands);
+            }
         }
+    }
+        //== handle getting the commands
+        //public Object handlePlayback(){}
 
+        //===== Gamepad Logic Method
         //== dynamic control getter:
         public Gamepad getCommands(){
             //Command Storage
             Gamepad giveTheseCommands;
 
             //This is where the commands are selected.... (useful for recording playback)
-            if(this.useGamepad1){
+            if(this.useGamepad1){// Note this code could be modified to pick and choose and return even more commands...
                 giveTheseCommands = gamepad1;
             }else{
                 giveTheseCommands = gamepad2;
             }
 
             //Modify the Toggle Buttons!!!!
-            giveTheseCommands.y = this.y.toggled(giveTheseCommands.y);// playback should override this...
-            giveTheseCommands.x = this.x.toggled(giveTheseCommands.x);
+            giveTheseCommands.y = this.allToggleables[1].toggled(giveTheseCommands.y);// playback should override this...
+            giveTheseCommands.x = this.allToggleables[0].toggled(giveTheseCommands.x);
+
+            //=== Record Commands: press <????> to toggle reccording...
+            this.handleRecording(giveTheseCommands);
 
             //=== Use Precision Modifier:
             if(giveTheseCommands.y){
@@ -292,41 +341,19 @@ public class HolonomicDriveRecord extends LinearOpMode {
 
         }
 
-        //== handle the intermediary recording Logic
-        public void handleRecording(Gamepad inputCommands){
-            // Do the settings allow recording
-            if(this.enableRecording){
-                //=== Permit a new recording to begin
-                if(inputCommands.start){
-                    if(!this.isRecording){
-                        this.observer.start();
-                        this.isRecording = true;
-                    }else{
-                        // end and save the recording
-                        this.observer.endAndSave();
-                        this.isRecording = false;
-                    }
 
-                }
-
-                //=== Observe:
-                if(this.isRecording){
-                    this.observer.observe(inputCommands);
-                }
-            }
-        }
 
     //=========== Run the Op Mode ===========
     public void runOpMode() throws InterruptedException{
 
         //======== Run the custom initializations! ========
         this.customInit();
+
         //======== Run the Loop ========
         while(opModeIsActive()){
 
             //=== Controls and Recording
             Gamepad currentCommands = this.getCommands();// get the current commands: abstractify controls instead of redefining...
-            this.handleRecording(currentCommands);// Manages start/stop recording of the commands and their saving etc...
 
             //=== Activation computations (NOTE! README: these are redefined for each iteration of the loop!!!!!! )
                 //=== Controls: Redefine LEFT Stick Values (invert if settings say so):
@@ -348,8 +375,8 @@ public class HolonomicDriveRecord extends LinearOpMode {
                     double normalizedU = sqrt(pow(0.7071*stick_x,2.0) + pow(0.7071*stick_y,2.0)) * (stick_y/abs(stick_y));
 
             //=== Activation Values Motors
-                double[] clockActivations = {1.0*turningSpeed,1.0*turningSpeed,-1.0*turningSpeed,-1.0*turningSpeed};
-                double[] cntrClockActivations = {-1.0*turningSpeed,-1.0*turningSpeed,1.0*turningSpeed,1.0*turningSpeed};
+                double[] clockActivations = {turningSpeed,turningSpeed,-turningSpeed,-turningSpeed};
+                double[] cntrClockActivations = {-turningSpeed,-turningSpeed,turningSpeed,turningSpeed};
                 double[] horizontalActivations = {stick_x,-stick_x,-stick_x,stick_x};
                 double[] verticalActivations = {-stick_y,-stick_y,-stick_y,-stick_y};
                 double[] diagonalTopRightBackLeft = {0,-normalizedU,-normalizedU,0};// spin perpendicular diagonal wheels
@@ -357,7 +384,7 @@ public class HolonomicDriveRecord extends LinearOpMode {
                 double[] stopActivations = {0,0,0,0};
 
             //=== Activation Positions Servos
-                double[] clawOpenActivations = {0.58,0.58};//corresponds to 180 deg : Desired: 100deg ~ 0.528 for 95 deg
+                double[] clawOpenActivations = {105,105};// Max = 180deg min = 0 deg
                 double[] clawClosedActivations= {0,0};
 
             //=== Command Conditions Motors:
@@ -379,6 +406,7 @@ public class HolonomicDriveRecord extends LinearOpMode {
                 boolean doSlideUp = currentCommands.dpad_down;
                 boolean doSlideDown = currentCommands.dpad_up;
                 boolean doSlideStop = !doSlideDown && !doSlideUp;
+
             //===== Directional Movement
                 //=== Rotation Movement: left_bumper = CounterClockwise, right_bumper = Clockwise
                     if(doClockwise){// rotate Clockwise
@@ -421,7 +449,7 @@ public class HolonomicDriveRecord extends LinearOpMode {
 
             //===== LinearSlide Movement
                 if(doSlideDown){//move slide down
-                    this.activateSlide(0-1.0);
+                    this.activateSlide(-1.0);
                 }
                 if(doSlideUp){//move slide up
                     this.activateSlide(1.0);
@@ -429,15 +457,6 @@ public class HolonomicDriveRecord extends LinearOpMode {
                 if(doSlideStop){// hold position
                     this.activateSlide(0.0);
                 }
-
-                /*
-                * Note: add in diagonal threshold
-                *       add in customizable speeds for turning
-                *       add in variable speed
-                *       add in rotation smoothing
-                *       KEEP the acceleration curve function
-                *       add in diagonal smoothing...
-                * */
             idle();
         }
     }
