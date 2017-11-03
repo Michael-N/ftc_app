@@ -78,7 +78,7 @@ public class HolonomicDrive extends LinearOpMode {
         public int[] toggleDelays = {1600,900};// toggle delays for claw and precisionSpeed of the robot
         public double stickThreshold = 0.18;//threshold for vertical and horizontal movement
         public double diagonalThreshold = 0.24;// threshold for diagonal movement
-        public double triggerThreshold = 0.18;
+        public double triggerThreshold = 0.15;
         public boolean useGamepad1 = true; //The controller that clicks <start> <a> is gamepad 1 else use gamepad 2 <start> <b>
 
         //=== Reccording
@@ -210,13 +210,17 @@ public class HolonomicDrive extends LinearOpMode {
             * or an alternate in radians
             *
             *
-            * double y_ =0.5*sin(PI*(abs(x)-0.5)) +0.5;
+            * double y_ =0.5*sin(PI*(abs(x)-0.5)) +0.5;// G(x) second favorite
             *
             * or an alternate
             *
             * double y_ = tanh(1.0926*(abs(x)-0.5)) + 0.5;
-            * double y_ = 0.5*tanh(k*(abs(x)-0.5)) + 0.5;  // my favorite
+            * double y_ = 0.5*tanh(k*(abs(x)-0.5)) + 0.5;  // K(x) my favorite
             *
+            *  interactive graph located at: https://www.desmos.com/calculator/w5vdhzlmlo
+            *
+            *  this graph shows that for the d/dx K(x) > d/dx G(x) which means more acceleration
+            *  However if K(x) is tuned the overall max acceleration can be further minimized...
             * */
         //== The base equation: be sure to be careful with domain and range d: [-1,1] range: [0,1]
         double y_ = 0.5*tanh(5*(abs(x)-0.5)) + 0.5;
@@ -344,8 +348,6 @@ public class HolonomicDrive extends LinearOpMode {
             return giveTheseCommands;
 
         }
-
-
 
     //=========== Run the Op Mode ===========
     public void runOpMode() throws InterruptedException{
