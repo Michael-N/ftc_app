@@ -151,6 +151,7 @@ public class recordingManager {
             return currentStepObject;
         }catch(JSONException ex){
             //do Nothing
+            return new Object(); //WILL NOT WORK FIX THIS LATER!!!
         }
 
     }
