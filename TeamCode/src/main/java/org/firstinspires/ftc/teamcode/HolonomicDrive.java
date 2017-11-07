@@ -68,7 +68,7 @@ public class HolonomicDrive extends LinearOpMode {
 
         //=== Speed
         public double precisionSpeed = 0.5;//  % of max speed as fraction:  tap & release <y> to toggle precision speed
-        public double changePrecisionSpeedStep = 0.001;
+        public double changePrecisionSpeedStep = 0.01;
         public double regularSpeed = 0.8;// % of max speed as a fraction
         public double linearSlideSpeed = 0.5;// independent of all other speeds and precision modes
 
