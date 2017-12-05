@@ -63,13 +63,13 @@ public class HolonomicDrive extends LinearOpMode {
         //=== Servos
         public String[] servoNames = {"servoRight","servoLeft"}; // Use: same as Motors Section above
         public int[] servoMappings = {0,1};
-        public boolean[] servoReverse = {false,true};
+        public boolean[] servoReverse = {true,false};
         public boolean clawInitialStateOpen = true;//sets whether the claw is positioned open: both servos should be at 0 deg  -true- or closed -false- on startup
 
         //=== Speed
         public double precisionSpeed = 0.5;//  % of max speed as fraction:  tap & release <y> to toggle precision speed
         public double changePrecisionSpeedStep = 0.01;
-        public double regularSpeed = 0.8;// % of max speed as a fraction
+        public double regularSpeed = 0.5;// % of max speed as a fraction
         public double linearSlideSpeed = 0.5;// independent of all other speeds and precision modes
 
         //=== Controls
@@ -339,11 +339,6 @@ public class HolonomicDrive extends LinearOpMode {
             //=== Record Commands: press <????> to toggle reccording...
             this.handleRecording(giveTheseCommands);
 
-            //=== Use Precision Modifier:
-            if(giveTheseCommands.y){
-                this.isPrecisionSpeed = !this.isPrecisionSpeed; // toggle precision speed by 'clicking' y
-            }
-
             //Return the commands
             return giveTheseCommands;
 
@@ -362,6 +357,10 @@ public class HolonomicDrive extends LinearOpMode {
             Gamepad currentCommands = this.getCommands();// get the current commands: abstractify controls instead of redefining...
 
             //=== Activation computations (NOTE! README: these are redefined for each iteration of the loop!!!!!! )
+                //=== Use Precision Modifier:
+                    if(currentCommands.y){
+                       this.isPrecisionSpeed = !this.isPrecisionSpeed; // toggle precision speed by 'clicking' y
+                    }
                 //=== Controls: Redefine LEFT Stick Values (invert if settings say so):
                     double stick_x = this.invertControlsXY[0] ? -currentCommands.left_stick_x : currentCommands.left_stick_x;
                     double stick_y = this.invertControlsXY[1] ? -currentCommands.left_stick_y : currentCommands.left_stick_y;
@@ -402,8 +401,9 @@ public class HolonomicDrive extends LinearOpMode {
                 double[] stopActivations = {0,0,0,0};
 
             //=== Activation Positions Servos
-                double[] clawOpenActivations = {100,100};// Max = 180deg min = 0 deg
-                double[] clawClosedActivations= {0,0};
+                double[] clawClosedActivations = {100,100};// Max = 180deg min = 0 deg
+                double[] clawClosedFurtherActivations = {120,120};
+                double[] clawOpenActivations= {0,0};
 
             //=== Command Conditions Motors:
                 boolean cDoTurn = this.isAboveThreshold(rt,triggerThreshold);// clockwise
@@ -417,10 +417,6 @@ public class HolonomicDrive extends LinearOpMode {
                 boolean diagonalOne = doDiagonal && (0<(stick_x * stick_y));//  / diagonal movement
                 boolean diagonalTwo = doDiagonal && (0>(stick_x*stick_y));//    \ diagonal movement
                 boolean[] willRunSequenceForOtherCommands = {doForRev,doHorz,doTurn,diagonalOne,diagonalTwo};// Stop
-
-            //=== Command Conditions Servos:
-                boolean doClawOpen = currentCommands.x && !this.clawIsOpen;// open if toggled and the claw is not open
-                boolean doClawClose = currentCommands.x && this.clawIsOpen;
 
             //=== Command Conditions LinearSlide
                 boolean doSlideUp = currentCommands.dpad_down;
@@ -467,6 +463,11 @@ public class HolonomicDrive extends LinearOpMode {
                 if(currentCommands.x){//=== Claw Close
                     this.activateServos(clawClosedActivations);
                     this.clawIsOpen = !this.clawIsOpen;// is used in the loop...
+                }
+                //doClawClose Further
+                if(currentCommands.y){
+                    this.activateServos(clawClosedFurtherActivations);
+                    this.clawIsOpen = !this.clawIsOpen;
                 }
 
             //===== LinearSlide Movement
