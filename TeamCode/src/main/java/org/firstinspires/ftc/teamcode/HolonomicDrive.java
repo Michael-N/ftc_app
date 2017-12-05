@@ -401,8 +401,8 @@ public class HolonomicDrive extends LinearOpMode {
                 double[] stopActivations = {0,0,0,0};
 
             //=== Activation Positions Servos
-                double[] clawClosedActivations = {100,100};// Max = 180deg min = 0 deg
-                double[] clawClosedFurtherActivations = {120,120};
+                double[] clawClosedActivations = {92,100};// Max = 180deg min = 0 deg asymmetry of activations due to frame asymmetry
+                double[] clawClosedFurtherActivations = {107,115};
                 double[] clawOpenActivations= {0,0};
 
             //=== Command Conditions Motors:
