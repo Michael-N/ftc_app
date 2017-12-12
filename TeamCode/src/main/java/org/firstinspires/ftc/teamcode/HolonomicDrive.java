@@ -58,7 +58,7 @@ public class HolonomicDrive extends LinearOpMode {
         //=== Motor for Linear slide:
         public String linearSlideMotorName = "linearSlide";
         public boolean linearSlideReverse = false;
-        //public boolean useEncoders = false;
+        public boolean slideUseEncoder = false;
 
         //=== Servos
         public String[] servoNames = {"servoRight","servoLeft"}; // Use: same as Motors Section above
@@ -186,7 +186,12 @@ public class HolonomicDrive extends LinearOpMode {
             //=== Linear Slide
                 this.linearSlideMotor = hardwareMap.dcMotor.get(this.linearSlideMotorName);
                 if(this.linearSlideReverse){
+                    //Reverse Direction
                     this.linearSlideMotor.setDirection(DcMotor.Direction.REVERSE);
+                }
+                if(this.slideUseEncoder){
+                    //ACCEPT encoder values!!
+                    this.linearSlideMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
                 }
             //======== Wait for Start ========
             this.waitForStart();
@@ -265,8 +270,18 @@ public class HolonomicDrive extends LinearOpMode {
             }
         }
         //==Activate linear Slide Motor
-        public void  activateSlide(double activationValue){
-            this.linearSlideMotor.setPower(this.linearSlideSpeed*activationValue);
+        public void  activateSlide(double activationValue, int slidePosition){
+
+
+            //Use Encoder: if this is true then setPower determines speed
+            if(this.slideUseEncoder){
+                //NOTE context determines the next line's use!
+                this.linearSlideMotor.setPower(this.linearSlideSpeed*abs(activationValue));
+                this.linearSlideMotor.setTargetPosition(slidePosition);
+            }else{
+                //NOTE context
+                this.linearSlideMotor.setPower(this.linearSlideSpeed*activationValue);
+            }
         }
         //== Activates Servos with POSITION values as a list:
         public void activateServos(double[] activationValues){
@@ -472,13 +487,16 @@ public class HolonomicDrive extends LinearOpMode {
 
             //===== LinearSlide Movement
                 if(doSlideDown){//move slide down
-                    this.activateSlide(-1.0);
+                    this.activateSlide(-1.0,0);
                 }
                 if(doSlideUp){//move slide up
-                    this.activateSlide(1.0);
+                    this.activateSlide(1.0,1);
                 }
                 if(doSlideStop){// hold position
-                    this.activateSlide(0.0);
+                    if(!this.slideUseEncoder){// THE 2nd 0 Would cause the position of the slide in incoder mode to change
+                        this.activateSlide(0.0,0);
+                    }
+
                 }
             idle();
         }
