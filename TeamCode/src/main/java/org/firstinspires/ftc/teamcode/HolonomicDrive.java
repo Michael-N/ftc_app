@@ -6,6 +6,7 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.hardware.Servo;
+import com.qualcomm.robotcore.robocol.Command;
 
 /**
  * Created by Mike on 9/23/2017.
@@ -82,14 +83,12 @@ public class HolonomicDrive extends LinearOpMode {
         public boolean useGamepad1 = true; //The controller that clicks <start> <a> is gamepad 1 else use gamepad 2 <start> <b>
 
         //=== Reccording
-        public boolean enableRecording = false;//Allow the user to record the gamepad inputs by toggling <start>
-        public int maxTimeReccording  = 600;// Time in Sec
+        public boolean enableRecording = false;
+        //Allow the user to record the gamepad inputs by pressing <start> and stop by <back>
 
         //=== Playback
-        public boolean enablePlayback = false;//Allow the user to play the previously recorded inputs by pressing <guide>
-        public boolean useMostRecentPlayback = true; // IF this is false then the code will look at the useThisFileForPlayback string
-        public String useThisFileForPlayback  = "";
-        public boolean allowPlaybackInterupt = false;
+        public boolean startPlaybackWhenInit = false;// Begin a playback specified below when robot is activated
+        public String useThisFilePathForPlayback  = "";
 
     //=========== Helper Classes ================
         //=== A toggle Class for True/False buttons
@@ -136,7 +135,8 @@ public class HolonomicDrive extends LinearOpMode {
         public Toggleable[] allToggleables = new Toggleable[makeToggleable.length];
         //=== Recording State
         public boolean isRecording = false;
-        public recordingManager observer = new recordingManager();
+        public boolean isPlaybacking = false;
+        public CommandObserver observer = new CommandObserver();
         //=== Servos
         public Servo[] allServos = new Servo[servoNames.length];//initial servo storage
         public Servo[] mappedServos = new Servo[servoNames.length];//mapped servo storage
@@ -314,25 +314,34 @@ public class HolonomicDrive extends LinearOpMode {
         if(this.enableRecording){
             //=== Permit a new recording to begin
             if(inputCommands.start){
-                if(!this.isRecording){
-                    this.observer.start();
-                    this.isRecording = true;
-                }else{
-                    // end and save the recording
-                    this.observer.endAndSave();
-                    this.isRecording = false;
-                }
-
+                this.isRecording = true;
             }
-
             //=== Observe:
             if(this.isRecording){
-                this.observer.observe(inputCommands);
+                this.observer.record(inputCommands);
+            }
+            //=== Save the reccording if stop command
+            if(inputCommands.back && this.isRecording){
+                this.observer.save("")// NEEDS LOCATION AND NAME!!! UNIQUE... use date...
             }
         }
     }
         //== handle getting the commands
-        //public Object handlePlayback(){}
+        public Gamepad handlePlayback(Gamepad inputCommands){
+
+            //Initilize the playback
+            if(startPlaybackWhenInit && !isPlaybacking){
+                this.observer.open(useThisFilePathForPlayback);
+                this.isPlaybacking = true;
+            }
+
+            //If playback then playback commands else the input passes through
+            if(this.isPlaybacking){
+                return this.observer.playback();
+            }else{
+                return inputCommands;
+            }
+        }
 
         //===== Gamepad Logic Method
         //== dynamic control getter:
@@ -351,8 +360,11 @@ public class HolonomicDrive extends LinearOpMode {
             giveTheseCommands.y = this.allToggleables[1].toggled(giveTheseCommands.y);// playback should override this...
             //giveTheseCommands.x = this.allToggleables[0].toggled(giveTheseCommands.x);
 
-            //=== Record Commands: press <????> to toggle reccording...
+            //=== Record Commands: press <start> to start reccording... <back> to stop
             this.handleRecording(giveTheseCommands);
+
+            //If not playback then giveTheseCommands is not modified...
+            giveTheseCommands = this.handlePlayback(giveTheseCommands);
 
             //Return the commands
             return giveTheseCommands;
@@ -487,7 +499,7 @@ public class HolonomicDrive extends LinearOpMode {
 
             //===== LinearSlide Movement
                 if(doSlideDown){//move slide down
-                    this.activateSlide(-1.0*0.05,0);// TEST EXPRIAMENTAL!!!! *0.05 
+                    this.activateSlide(-1.0*0.05,0);// TEST EXPRIAMENTAL!!!! *0.05
                 }
                 if(doSlideUp){//move slide up
                     this.activateSlide(1.0*0.05,1);
