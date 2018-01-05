@@ -7,6 +7,10 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.robocol.Command;
+import java.util.Date;
+import java.text.SimpleDateFormat;
+import java.io.File;
+
 
 /**
  * Created by Mike on 9/23/2017.
@@ -50,6 +54,26 @@ public class HolonomicDrive extends LinearOpMode {
     *       KEEP the acceleration curve function
     *       add in diagonal smoothing...
     * */
+
+    /*
+    *   Brief Outline of Code Logic:
+    *       Settings
+    *           category (ex. a motor or servo or claw)
+    *       Initializations
+    *           category
+    *
+    *      ~~~ LOOP ~~~
+    *
+    *       Commands
+    *           get
+    *           save
+    *           modify
+    *       Interpret Commands
+    *           category (ex. linear slide, holonomic wheels, etc)
+    *       Function calls
+    *           category
+
+    * */
     //=========== Settings and Config ==============
         //=== Motors for Wheels
         public String[] motorNames = {"motorLeftFront","motorLeftRear","motorRightFront","motorRightRear"};
@@ -84,6 +108,7 @@ public class HolonomicDrive extends LinearOpMode {
 
         //=== Reccording
         public boolean enableRecording = false;
+        public String saveDirectory = "";
         //Allow the user to record the gamepad inputs by pressing <start> and stop by <back>
 
         //=== Playback
@@ -145,9 +170,9 @@ public class HolonomicDrive extends LinearOpMode {
         //=== Custom Init Method
         public void customInit(){
             //===== Toggleables
-            for(int e=0; e<makeToggleable.length;e++){
-                this.allToggleables[e] = new Toggleable(this.toggleDelays[e]);
-            }
+                for(int e=0; e<makeToggleable.length;e++){
+                    this.allToggleables[e] = new Toggleable(this.toggleDelays[e]);
+                }
             //===== Motors
                 //=== Initial Motor fetch
                 for(int k=0;k<motorNames.length;k++){
@@ -191,7 +216,7 @@ public class HolonomicDrive extends LinearOpMode {
                 }
                 if(this.slideUseEncoder){
                     //ACCEPT encoder values!!
-                    this.linearSlideMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+                    this.linearSlideMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
                 }
             //======== Wait for Start ========
             this.waitForStart();
@@ -322,7 +347,18 @@ public class HolonomicDrive extends LinearOpMode {
             }
             //=== Save the reccording if stop command
             if(inputCommands.back && this.isRecording){
-                this.observer.save("")// NEEDS LOCATION AND NAME!!! UNIQUE... use date...
+
+                //== Unique Timestamp
+                String timeStamp = new SimpleDateFormat("HH.mm.ss").format(new Date());
+
+                //== Filename concat
+                String filename = "Recording " + timeStamp + ".json";
+
+                //== FilePATH formatting hack
+                String filepath = new File(saveDirectory,filename).toString();
+
+                //== Save the file
+                this.observer.save(filepath);
             }
         }
     }
@@ -499,13 +535,13 @@ public class HolonomicDrive extends LinearOpMode {
 
             //===== LinearSlide Movement
                 if(doSlideDown){//move slide down
-                    this.activateSlide(-1.0*0.05,0);// TEST EXPRIAMENTAL!!!! *0.05
+                    this.activateSlide(-1.0,0);
                 }
                 if(doSlideUp){//move slide up
-                    this.activateSlide(1.0*0.05,1);
+                    this.activateSlide(1.0,1);
                 }
                 if(doSlideStop){// hold position
-                    if(!this.slideUseEncoder){// THE 2nd 0 Would cause the position of the slide in incoder mode to change
+                    if(!this.slideUseEncoder){// THE 2nd 0 Would cause the position of the slide in encoder mode to change
                         this.activateSlide(0.0,0);
                     }
 

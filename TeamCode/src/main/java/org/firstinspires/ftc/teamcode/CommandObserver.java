@@ -7,6 +7,7 @@ import com.qualcomm.robotcore.hardware.Gamepad;
 import com.fasterxml.jackson.databind.*;
 import java.io.File;
 import java.util.ArrayList;
+import android.content.Context;
 
 public class CommandObserver {
         /*
@@ -45,8 +46,10 @@ public class CommandObserver {
 
     //== Save the Recording to a filepath:
     public void save(String filepathname){
+
         try{
-            recordedGamepads = myJsonHandler.writeValue(new File(filepathname),recordedGamepads);// skip exception handling for jackson... they wrote it wrong...
+
+            myJsonHandler.writeValue(new File(filepathname),recordedGamepads);// skip exception handling for jackson... they wrote it wrong...
         }catch(java.io.IOException fileError){
 
         }
