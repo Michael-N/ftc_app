@@ -6,6 +6,7 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.hardware.Servo;
+//import org.firstinspires.ftc.robotcore.external.Telemetry;
 import com.qualcomm.robotcore.robocol.Command;
 import java.util.Date;
 import java.text.SimpleDateFormat;
@@ -75,6 +76,7 @@ public class HolonomicDrive extends LinearOpMode {
 
     * */
     //=========== Settings and Config ==============
+
         //=== Motors for Wheels
         public String[] motorNames = {"motorLeftFront","motorLeftRear","motorRightFront","motorRightRear"};
         public int[] motorMappings = {0,1,2,3};
@@ -83,7 +85,9 @@ public class HolonomicDrive extends LinearOpMode {
         //=== Motor for Linear slide:
         public String linearSlideMotorName = "linearSlide";
         public boolean linearSlideReverse = false;
-        public boolean slideUseEncoder = true;
+        public boolean slideUseEncoder = true;// Permits setting a max and a min height... without the encoders... there is no max value... user controled
+        public int slideMaxHeight = 2*1400;// ~~ 1400 is 1 turn... see docs for exact details
+        public int slideMinHeight = 0;
 
         //=== Servos
         public String[] servoNames = {"servoRight","servoLeft"}; // Use: same as Motors Section above
@@ -161,7 +165,7 @@ public class HolonomicDrive extends LinearOpMode {
         //=== Recording State
         public boolean isRecording = false;
         public boolean isPlaybacking = false;
-        public CommandObserver observer = new CommandObserver();
+        //public CommandObserver observer = new CommandObserver();
         //=== Servos
         public Servo[] allServos = new Servo[servoNames.length];//initial servo storage
         public Servo[] mappedServos = new Servo[servoNames.length];//mapped servo storage
@@ -169,6 +173,9 @@ public class HolonomicDrive extends LinearOpMode {
 
         //=== Custom Init Method
         public void customInit(){
+            telemetry.addData("Custom INIT","Start");
+            telemetry.update();
+
             //===== Toggleables
                 for(int e=0; e<makeToggleable.length;e++){
                     this.allToggleables[e] = new Toggleable(this.toggleDelays[e]);
@@ -216,7 +223,9 @@ public class HolonomicDrive extends LinearOpMode {
                 }
                 if(this.slideUseEncoder){
                     //ACCEPT encoder values!!
-                    this.linearSlideMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+                    this.linearSlideMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+                    this.linearSlideMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+                    //this.linearSlideMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
                 }
             //======== Wait for Start ========
             this.waitForStart();
@@ -295,17 +304,27 @@ public class HolonomicDrive extends LinearOpMode {
             }
         }
         //==Activate linear Slide Motor
-        public void  activateSlide(double activationValue, int slidePosition){
+        public void  activateSlide(double activationValue){
+            // DO NOT use go to position instead just use encoders to observe the encoder value... max min if max min setpower = 0 use run using encoders
 
-
+            //Power Value
+            double powerVal = this.linearSlideSpeed*abs(activationValue);
             //Use Encoder: if this is true then setPower determines speed
             if(this.slideUseEncoder){
                 //NOTE context determines the next line's use!
-                this.linearSlideMotor.setPower(this.linearSlideSpeed*abs(activationValue));
-                this.linearSlideMotor.setTargetPosition(slidePosition);
+                this.linearSlideMotor.setPower(powerVal);
+
+
+                if((this.linearSlideMotor.getCurrentPosition() < this.slideMaxHeight) && (powerVal>=0) ){ // Less than Max and command go up
+                    this.linearSlideMotor.setPower(powerVal);
+                }else if ((this.linearSlideMotor.getCurrentPosition() > this.slideMinHeight) && (powerVal<0)){// Greater than min command go down
+                    this.linearSlideMotor.setPower(powerVal);
+                }else{// do nothing
+                    this.linearSlideMotor.setPower(0);
+                }
             }else{
                 //NOTE context
-                this.linearSlideMotor.setPower(this.linearSlideSpeed*activationValue);
+                this.linearSlideMotor.setPower(powerVal);
             }
         }
         //== Activates Servos with POSITION values as a list:
@@ -334,7 +353,7 @@ public class HolonomicDrive extends LinearOpMode {
 
         //===== Playback and Recording methods
         //== handle the intermediary recording Logic
-        public void handleRecording(Gamepad inputCommands){
+        /*public void handleRecording(Gamepad inputCommands){
         // Do the settings allow recording
         if(this.enableRecording){
             //=== Permit a new recording to begin
@@ -378,7 +397,7 @@ public class HolonomicDrive extends LinearOpMode {
                 return inputCommands;
             }
         }
-
+*/
         //===== Gamepad Logic Method
         //== dynamic control getter:
         public Gamepad getCommands(){
@@ -397,10 +416,10 @@ public class HolonomicDrive extends LinearOpMode {
             //giveTheseCommands.x = this.allToggleables[0].toggled(giveTheseCommands.x);
 
             //=== Record Commands: press <start> to start reccording... <back> to stop
-            this.handleRecording(giveTheseCommands);
+            //this.handleRecording(giveTheseCommands);
 
             //If not playback then giveTheseCommands is not modified...
-            giveTheseCommands = this.handlePlayback(giveTheseCommands);
+            //giveTheseCommands = this.handlePlayback(giveTheseCommands);
 
             //Return the commands
             return giveTheseCommands;
@@ -534,15 +553,20 @@ public class HolonomicDrive extends LinearOpMode {
                 }
 
             //===== LinearSlide Movement
+
                 if(doSlideDown){//move slide down
-                    this.activateSlide(-1.0,0);
+                    this.activateSlide(-1.0);
+                    telemetry.addData("Encoder Value",linearSlideMotor.getCurrentPosition());
+                    telemetry.update();
                 }
                 if(doSlideUp){//move slide up
-                    this.activateSlide(1.0,1);
+                    this.activateSlide(1.0);
+                    telemetry.addData("Encoder Value",linearSlideMotor.getCurrentPosition());
+                    telemetry.update();
                 }
                 if(doSlideStop){// hold position
                     if(!this.slideUseEncoder){// THE 2nd 0 Would cause the position of the slide in encoder mode to change
-                        this.activateSlide(0.0,0);
+                        this.activateSlide(0.0);
                     }
 
                 }

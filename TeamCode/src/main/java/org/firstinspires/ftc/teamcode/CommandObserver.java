@@ -9,13 +9,16 @@ import java.io.File;
 import java.util.ArrayList;
 import android.content.Context;
 
-public class CommandObserver {
-        /*
+  /*
         *   Record(Gamepad): build list of gamepad coppies
         *   playback(): return the next command in the list
         *   Save(Filename): save as the json File Name
         *   open(filename): Open a json and Convert
         * */
+
+  /*
+public class CommandObserver {
+
     //Json Handler
     ObjectMapper myJsonHandler = new ObjectMapper();
 
@@ -66,3 +69,4 @@ public class CommandObserver {
 
 
 }
+*/
