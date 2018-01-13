@@ -22,12 +22,11 @@ import java.io.File;
 public class HolonomicDrive extends LinearOpMode {
     //=========== Controls Guide ==================
     /*
-    *   Rotation: <Right-Trigger>= Clockwise
-    *             <Left-Trigger>= CounterClockwise
+    *   Rotation: <Right-Trigger> Clockwise, <Left-Trigger> CounterClockwise
     *
-    *   Precision: <y> = toggle precision/regular speed
+    *   Precision: <y>  toggle precision/regular speed
     *
-    *   ChangePrecisionSpeed: increment <dpad-right>      decrement  <dpad-left>
+    *   ChangePrecisionSpeed: <dpad-right> increment, <dpad-left> decrement
     *
     *   Strafing (Horizontal):  <left-stick-x> = mapped right to right and left to left unless controls setting invertControlsXY[0] is true
     *
@@ -38,6 +37,8 @@ public class HolonomicDrive extends LinearOpMode {
     *   Claw: open/close   <x> to close  <a> to open
     *
     *   LinearSlide: <dpadUp> to move the slide upwards and <dpadDown> downwards
+    *
+    *   HSlide: <left_bumper> Retract , <right_bumper> Extend
     *
     *   ~~~Planed Features~~~
     *   -add in encoder for motors 2,4 (back two motors) + option to toggle between using them and not
@@ -86,8 +87,14 @@ public class HolonomicDrive extends LinearOpMode {
         public String linearSlideMotorName = "linearSlide";
         public boolean linearSlideReverse = false;
         public boolean slideUseEncoder = true;// Permits setting a max and a min height... without the encoders... there is no max value... user controled
-        public int slideMaxHeight = 2*1400;// ~~ 1400 is 1 turn... see docs for exact details
+        public int slideMaxHeight = 5*1400;// ~~ 1400 is 1 turn... see docs for exact details
         public int slideMinHeight = 0;
+
+        //=== Motor for H Slide
+        public String hSlideMotorName = "hSlide";// THIS MOTOR MUST HAVE ENCODER!!!!
+        public boolean hSlideReverse  = false;
+        public int hSlideMax = 3*1400;// ~~ 1400 is 1 turn... see docs for exact details
+        public int hSlideMin = 0;
 
         //=== Servos
         public String[] servoNames = {"servoRight","servoLeft"}; // Use: same as Motors Section above
@@ -100,6 +107,7 @@ public class HolonomicDrive extends LinearOpMode {
         public double changePrecisionSpeedStep = 0.01;
         public double regularSpeed = 0.5;// % of max speed as a fraction
         public double linearSlideSpeed = 0.5;// independent of all other speeds and precision modes
+        public double hSlideSpeed = 0.5;// as the dividing factor of the activation value
 
         //=== Controls
         public boolean[] invertControlsXY = {false,false};
@@ -157,6 +165,7 @@ public class HolonomicDrive extends LinearOpMode {
         public DcMotor[] allMotors = new DcMotor[motorNames.length];//initial motor storage
         public DcMotor[] mappedMotors = new DcMotor[motorNames.length];//mapped motor storage
         public DcMotor linearSlideMotor;
+        public DcMotor hSlideMotor;
         //=== Speed State
         public boolean isPrecisionSpeed = false;//Store the state of Precision Status:
         public double initialPrecisionSpeed = precisionSpeed;
@@ -170,7 +179,8 @@ public class HolonomicDrive extends LinearOpMode {
         public Servo[] allServos = new Servo[servoNames.length];//initial servo storage
         public Servo[] mappedServos = new Servo[servoNames.length];//mapped servo storage
         public boolean clawIsOpen;
-
+        //=== HSlide Custom meta:
+        public int hSlideCurrentEncoderValue = 0;
         //=== Custom Init Method
         public void customInit(){
             telemetry.addData("Custom INIT","Start");
@@ -227,6 +237,19 @@ public class HolonomicDrive extends LinearOpMode {
                     this.linearSlideMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
                     //this.linearSlideMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
                 }
+
+            //=== H Slide
+                this.hSlideMotor = hardwareMap.dcMotor.get(this.hSlideMotorName);
+                if(this.hSlideReverse){
+                    //Reverse Direction
+                    this.hSlideMotor.setDirection(DcMotor.Direction.REVERSE);
+                }
+
+                //ACCEPT encoder values!!
+                this.hSlideMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+                this.hSlideMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+                //this.linearSlideMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+
             //======== Wait for Start ========
             this.waitForStart();
 
@@ -327,6 +350,24 @@ public class HolonomicDrive extends LinearOpMode {
                 this.linearSlideMotor.setPower(powerVal);
             }
         }
+        //==Activate H slide
+        public void activateHSlide(double activationValue,int in){
+            /*
+            *   Activation Value is Speed
+            *    int in   .... when int in is positive 1 then move slide in else -1 then extend slide
+            *
+            *
+            * */
+
+            double powerVal = in*this.hSlideSpeed*abs(activationValue);
+            int position = this.hSlideMotor.getCurrentPosition();
+            while(((hSlideMin<position ) &&(position < hSlideMax)) && (powerVal != 0)){
+                telemetry.addData("HSLide Encoder value",this.hSlideMotor.getCurrentPosition());
+                this.hSlideMotor.setPower(powerVal);
+                position = this.hSlideMotor.getCurrentPosition();
+            }
+            this.hSlideMotor.setPower(0);
+        }
         //== Activates Servos with POSITION values as a list:
         public void activateServos(double[] activationValues){
             for(int k=0;k<activationValues.length;k++){
@@ -334,7 +375,6 @@ public class HolonomicDrive extends LinearOpMode {
                 this.mappedServos[k].setPosition(activationScaledFromDeg);
             }
         }
-
         //===== Logical methods
         //== logical or in the strictest sense (the values must be opposites)
         public boolean eXOR(boolean x, boolean y) {// Courtesy of ~stack overflow~
@@ -426,30 +466,20 @@ public class HolonomicDrive extends LinearOpMode {
 
         }
 
-    //=========== Run the Op Mode ===========
-    public void runOpMode() throws InterruptedException{
+        //===== Applications And Features:
+        public void DirectionalMovement(Gamepad currentCommands){
 
-        //======== Run the custom initializations! ========
-        this.customInit();
-
-        //======== Run the Loop ========
-        while(opModeIsActive()){
-
-            //=== Controls and Recording
-            Gamepad currentCommands = this.getCommands();// get the current commands: abstractify controls instead of redefining...
-
-            //=== Activation computations (NOTE! README: these are redefined for each iteration of the loop!!!!!! )
-                //=== Use Precision Modifier:
-                    if(currentCommands.y){
-                       this.isPrecisionSpeed = !this.isPrecisionSpeed; // toggle precision speed by 'clicking' y
-                    }
-                //=== Controls: Redefine LEFT Stick Values (invert if settings say so):
-                    double stick_x = this.invertControlsXY[0] ? -currentCommands.left_stick_x : currentCommands.left_stick_x;
-                    double stick_y = this.invertControlsXY[1] ? -currentCommands.left_stick_y : currentCommands.left_stick_y;
-                //== Triggers
-                    double rt = currentCommands.right_trigger;
-                    double lt=  currentCommands.left_trigger;
-                //=== Diagonal Movement Normalized:
+            //=== Use Precision Modifier:
+            if(currentCommands.y){
+                this.isPrecisionSpeed = !this.isPrecisionSpeed; // toggle precision speed by 'clicking' y
+            }
+            //=== Controls: Redefine LEFT Stick Values (invert if settings say so):
+            double stick_x = this.invertControlsXY[0] ? -currentCommands.left_stick_x : currentCommands.left_stick_x;
+            double stick_y = this.invertControlsXY[1] ? -currentCommands.left_stick_y : currentCommands.left_stick_y;
+            //== Triggers
+            double rt = currentCommands.right_trigger;
+            double lt=  currentCommands.left_trigger;
+            //=== Diagonal Movement Normalized:
                     /* ^above
 
                     motor only accepts values [-1,1] and the diagonal movement must be responsive to both x & y rather the
@@ -462,114 +492,134 @@ public class HolonomicDrive extends LinearOpMode {
                             ---
                             x
                     */
-                    double normalizedU = sqrt(pow(0.7071*stick_x,2.0) + pow(0.7071*stick_y,2.0)) * (stick_y/abs(stick_y));
+            double normalizedU = sqrt(pow(0.7071*stick_x,2.0) + pow(0.7071*stick_y,2.0)) * (stick_y/abs(stick_y));
             //Change precision speed
-                if(currentCommands.dpad_right && (this.precisionSpeed <= 1)){//tick speed up
-                    this.precisionSpeed += changePrecisionSpeedStep;
-                }
-                if(currentCommands.dpad_left && (this.precisionSpeed >=0)){//tick seed down
-                    this.precisionSpeed -= changePrecisionSpeedStep;
-                }
-                if(currentCommands.dpad_right && currentCommands.dpad_left){//reset speed
-                    this.precisionSpeed = initialPrecisionSpeed;
-                }
-            //=== Activation Values Motors
-                double[] clockActivations = {rt,rt,-rt,-rt};
-                double[] cntrClockActivations = {-lt,-lt,lt,lt};
-                double[] horizontalActivations = {stick_x,-stick_x,-stick_x,stick_x};
-                double[] verticalActivations = {-stick_y,-stick_y,-stick_y,-stick_y};
-                double[] diagonalTopRightBackLeft = {0,-normalizedU,-normalizedU,0};// spin perpendicular diagonal wheels
-                double[] diagonalTopLeftBackRight = {-normalizedU,0,0,-normalizedU};
-                double[] stopActivations = {0,0,0,0};
-
-            //=== Activation Positions Servos
-                double[] clawClosedActivations = {92,100};// Max = 180deg min = 0 deg asymmetry of activations due to frame asymmetry
-                double[] clawClosedFurtherActivations = {107,115};
-                double[] clawOpenActivations= {0,0};
+            if(currentCommands.dpad_right && (this.precisionSpeed <= 1)){//tick speed up
+                this.precisionSpeed += changePrecisionSpeedStep;
+            }
+            if(currentCommands.dpad_left && (this.precisionSpeed >=0)){//tick seed down
+                this.precisionSpeed -= changePrecisionSpeedStep;
+            }
+            if(currentCommands.dpad_right && currentCommands.dpad_left){//reset speed
+                this.precisionSpeed = initialPrecisionSpeed;
+            }
 
             //=== Command Conditions Motors:
-                boolean cDoTurn = this.isAboveThreshold(rt,triggerThreshold);// clockwise
-                boolean crDoTurn = this.isAboveThreshold(lt,triggerThreshold);// counter clockwise
-                boolean doTurn = this.eXOR(cDoTurn,crDoTurn);//intermediary : Ensures do nothing if both are pressed
-                boolean doClockwise = doTurn && cDoTurn;// Clockwise
-                boolean doCounterClockwise = doTurn && crDoTurn;//CounterClockwise
-                boolean doForRev= this.isAboveThreshold(stick_y,stickThreshold) && !this.isAboveThreshold(stick_x,this.stickThreshold);// Forwards and Reverse
-                boolean doHorz = this.isAboveThreshold(stick_x,this.stickThreshold) && !this.isAboveThreshold(stick_y,this.stickThreshold);// Horizontal
-                boolean doDiagonal= this.isAboveThreshold(stick_x,this.diagonalThreshold) && this.isAboveThreshold(stick_y,this.diagonalThreshold);// Intermediary helper abstraction
-                boolean diagonalOne = doDiagonal && (0<(stick_x * stick_y));//  / diagonal movement
-                boolean diagonalTwo = doDiagonal && (0>(stick_x*stick_y));//    \ diagonal movement
-                boolean[] willRunSequenceForOtherCommands = {doForRev,doHorz,doTurn,diagonalOne,diagonalTwo};// Stop
+            boolean cDoTurn = this.isAboveThreshold(rt,triggerThreshold);// clockwise
+            boolean crDoTurn = this.isAboveThreshold(lt,triggerThreshold);// counter clockwise
+            boolean doTurn = this.eXOR(cDoTurn,crDoTurn);//intermediary : Ensures do nothing if both are pressed
+            boolean doClockwise = doTurn && cDoTurn;// Clockwise
+            boolean doCounterClockwise = doTurn && crDoTurn;//CounterClockwise
+            boolean doForRev= this.isAboveThreshold(stick_y,stickThreshold) && !this.isAboveThreshold(stick_x,this.stickThreshold);// Forwards and Reverse
+            boolean doHorz = this.isAboveThreshold(stick_x,this.stickThreshold) && !this.isAboveThreshold(stick_y,this.stickThreshold);// Horizontal
+            boolean doDiagonal= this.isAboveThreshold(stick_x,this.diagonalThreshold) && this.isAboveThreshold(stick_y,this.diagonalThreshold);// Intermediary helper abstraction
+            boolean diagonalOne = doDiagonal && (0<(stick_x * stick_y));//  / diagonal movement
+            boolean diagonalTwo = doDiagonal && (0>(stick_x*stick_y));//    \ diagonal movement
+            boolean[] willRunSequenceForOtherCommands = {doForRev,doHorz,doTurn,diagonalOne,diagonalTwo};// Stop
 
-            //=== Command Conditions LinearSlide
-                boolean doSlideUp = currentCommands.dpad_down;
-                boolean doSlideDown = currentCommands.dpad_up;
-                boolean doSlideStop = !doSlideDown && !doSlideUp;
+            //=== Activation Values Motors
+            double[] clockActivations = {rt,rt,-rt,-rt};
+            double[] cntrClockActivations = {-lt,-lt,lt,lt};
+            double[] horizontalActivations = {stick_x,-stick_x,-stick_x,stick_x};
+            double[] verticalActivations = {-stick_y,-stick_y,-stick_y,-stick_y};
+            double[] diagonalTopRightBackLeft = {0,-normalizedU,-normalizedU,0};// spin perpendicular diagonal wheels
+            double[] diagonalTopLeftBackRight = {-normalizedU,0,0,-normalizedU};
+            double[] stopActivations = {0,0,0,0};
 
             //===== Directional Movement
-                //=== Rotation Movement: left_bumper = CounterClockwise, right_bumper = Clockwise
-                    if(doClockwise){// rotate Clockwise
-                        this.activateMotors(clockActivations);
-                    }
-                    if(doCounterClockwise){// rotate CounterClockwise
-                        this.activateMotors(cntrClockActivations);
-                    }
+            //=== Rotation Movement: left_bumper = CounterClockwise, right_bumper = Clockwise
+            if(doClockwise){// rotate Clockwise
+                this.activateMotors(clockActivations);
+            }
+            if(doCounterClockwise){// rotate CounterClockwise
+                this.activateMotors(cntrClockActivations);
+            }
 
-                //=== Planar Movement XY
-                    if(doForRev){//== Movement Forwards & Reverse (vertical):
-                        this.activateMotors(verticalActivations);
-                    }
-                    if(doHorz){//== Movement Strafe (horizontal):
-                        this.activateMotors(horizontalActivations);
-                    }
+            //=== Planar Movement XY
+            if(doForRev){//== Movement Forwards & Reverse (vertical):
+                this.activateMotors(verticalActivations);
+            }
+            if(doHorz){//== Movement Strafe (horizontal):
+                this.activateMotors(horizontalActivations);
+            }
 
-                //=== Planar Movement Diagonal
-                    if(diagonalOne){//== / diagonal movement
-                        this.activateMotors(diagonalTopRightBackLeft);
-                    }
-                    if(diagonalTwo){//== \ diagonal movement
-                        this.activateMotors(diagonalTopLeftBackRight);
-                    }
+            //=== Planar Movement Diagonal
+            if(diagonalOne){//== / diagonal movement
+                this.activateMotors(diagonalTopRightBackLeft);
+            }
+            if(diagonalTwo){//== \ diagonal movement
+                this.activateMotors(diagonalTopLeftBackRight);
+            }
 
-                //=== Stop Movement
-                    if(this.allFalse(willRunSequenceForOtherCommands)){//== If all the other commands are false then therfore stop!
-                        this.activateMotors(stopActivations);
-                    }
-
-            //===== Claw Movement
-                //doClawOpen
-                if(currentCommands.a){//=== Claw Open
-                    this.activateServos(clawOpenActivations);
-                    this.clawIsOpen = !this.clawIsOpen;
-                }
-                //doClawClose
-                if(currentCommands.x){//=== Claw Close
-                    this.activateServos(clawClosedActivations);
-                    this.clawIsOpen = !this.clawIsOpen;// is used in the loop...
-                }
-                //doClawClose Further
-                if(currentCommands.y){
-                    this.activateServos(clawClosedFurtherActivations);
-                    this.clawIsOpen = !this.clawIsOpen;
-                }
+            //=== Stop Movement
+            if(this.allFalse(willRunSequenceForOtherCommands)){//== If all the other commands are false then therfore stop!
+                this.activateMotors(stopActivations);
+            }
+        }
+        public void LinearSlide(Gamepad currentCommands){
+            //=== Command Conditions LinearSlide
+            boolean doSlideUp = currentCommands.dpad_down;
+            boolean doSlideDown = currentCommands.dpad_up;
+            boolean doSlideStop = !doSlideDown && !doSlideUp;
 
             //===== LinearSlide Movement
+            if(doSlideDown){//move slide down
+                this.activateSlide(-1.0);
+            }
+            if(doSlideUp){//move slide up
+                this.activateSlide(1.0);
+            }
+            if(doSlideStop){// hold position
+                this.activateSlide(0.0);
+            }
+        }
+        public void Claw(Gamepad currentCommands){
+            //=== Activation Positions Servos
+            double[] clawClosedActivations = {92,100};// Max = 180deg min = 0 deg asymmetry of activations due to frame asymmetry
+            double[] clawClosedFurtherActivations = {107,115};
+            double[] clawOpenActivations= {0,0};
 
-                if(doSlideDown){//move slide down
-                    this.activateSlide(-1.0);
-                    telemetry.addData("Encoder Value",linearSlideMotor.getCurrentPosition());
-                    telemetry.update();
-                }
-                if(doSlideUp){//move slide up
-                    this.activateSlide(1.0);
-                    telemetry.addData("Encoder Value",linearSlideMotor.getCurrentPosition());
-                    telemetry.update();
-                }
-                if(doSlideStop){// hold position
-                    if(!this.slideUseEncoder){// THE 2nd 0 Would cause the position of the slide in encoder mode to change
-                        this.activateSlide(0.0);
-                    }
+            //doClawOpen
+            if(currentCommands.a){//=== Claw Open
+                this.activateServos(clawOpenActivations);
+                this.clawIsOpen = !this.clawIsOpen;
+            }
+            //doClawClose
+            if(currentCommands.x){//=== Claw Close
+                this.activateServos(clawClosedActivations);
+                this.clawIsOpen = !this.clawIsOpen;// is used in the loop...
+            }
+            //doClawClose Further
+            if(currentCommands.y){
+                this.activateServos(clawClosedFurtherActivations);
+                this.clawIsOpen = !this.clawIsOpen;
+            }
 
-                }
+        }
+        public void HSlide(Gamepad currentCommands){
+            if(currentCommands.left_bumper){// Retract
+                this.activateHSlide(1,-1);
+            }else if (currentCommands.right_bumper){// Extend
+                this.activateHSlide(1,1);
+            }
+        }
+
+    //=========== Run the Op Mode ===========
+    public void runOpMode() throws InterruptedException{
+
+        //======== Run the custom initializations! ========
+        this.customInit();
+
+        //======== Run the Loop ========
+        while(opModeIsActive()){
+
+            //=== Controls and Recording
+            Gamepad currentCommands = this.getCommands();// get the current commands: abstractify controls instead of redefining...
+            DirectionalMovement(currentCommands);
+            LinearSlide(currentCommands);
+            Claw(currentCommands);
+            HSlide(currentCommands);
+
             idle();
         }
     }
