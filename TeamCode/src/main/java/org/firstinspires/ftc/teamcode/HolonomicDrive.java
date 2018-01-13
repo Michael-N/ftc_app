@@ -6,13 +6,13 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.hardware.Servo;
-/*  UNUSED DEPS
+
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 import com.qualcomm.robotcore.robocol.Command;
 import java.util.Date;
 import java.text.SimpleDateFormat;
 import java.io.File;
-*/
+
 
 /**
  * Created by Mike on 9/23/2017.
@@ -39,8 +39,10 @@ public class HolonomicDrive extends LinearOpMode {
     *
     *   LinearSlide: <dpadUp> to move the slide upwards and <dpadDown> downwards
     *
-    *   HSlide: <left_bumper> Retract , <right_bumper> Extend
+    *   HSlide: <left_bumper> Retract , <right_bumper> Extend ... if setting  hSlidePositionBased is true then the bumper fully extends/retracts not incrementally as button is pressed
     *
+    *   Recording: Gamepad 2  <a> Start Recording, <b> End Recording                                                   (USE GAMEPAD 2 WHILE GAMEPAD 1 IS MAIN INPUT!)
+    *   Playback:  Gamepad 2  Use <x> Start Playback, <y> End Playback    when startPlaybackWhenInit is false          (USE GAMEPAD 2 WHILE GAMEPAD 1 IS MAIN INPUT!)
     * */
 
     /*
@@ -71,14 +73,12 @@ public class HolonomicDrive extends LinearOpMode {
         //=== Motor for Linear slide:
             public String linearSlideMotorName = "linearSlide";// the name of the motor as specified in the config file on the Robot Controller Phone
             public boolean linearSlideReverse = false;// Reverses the initial spin direction of the motor
-            public boolean slideUseEncoder = true;// Permits setting a max and a min height... without the encoders... there is no max value... user controled
-            public int slideMaxHeight = 5*1400;//Max Position for encoder value ~~ 1400 is 1 turn... see docs for exact details
-            public int slideMinHeight = 0;//Min Position for encoder value
 
         //=== Motor for H Slide
             public String hSlideMotorName = "hSlide";// THIS MOTOR MUST HAVE ENCODER!!!!
             public boolean hSlideReverse  = false;// Reverses the initial spin direction of the motor
-            public int hSlideMax = 3*1400;//Max Position for encoder value ~~ 1400 is 1 turn... see docs for exact details
+            public boolean hSlidePositionBased = true; // Use position for extend instead of hold button tap button to run to the position
+            public int hSlideMax = 5300;//Max Position for encoder value ~~ 1400 is 1 turn... see docs for exact details
             public int hSlideMin = 0;//Min Position for encoder value
 
         //=== Servos
@@ -102,9 +102,8 @@ public class HolonomicDrive extends LinearOpMode {
             public double diagonalThreshold = 0.24;// threshold for diagonal movement
             public double triggerThreshold = 0.15;// only accepts values with a absolute value greater than this
             public boolean useGamepad1 = true; //The controller that clicks <start> <a> is gamepad 1 else use gamepad 2 <start> <b>
-
         //=== Reccording
-            public boolean enableRecording = false;// Permit Recording
+            public boolean enableRecording = true;// Permit Recording
             public String saveDirectory = ""; //Allow the user to record the gamepad inputs by pressing <start> and stop by <back>
 
         //=== Playback
@@ -158,7 +157,7 @@ public class HolonomicDrive extends LinearOpMode {
         //=== Recording State
             public boolean isRecording = false;
             public boolean isPlaybacking = false;
-            //public CommandObserver observer = new CommandObserver();
+            public CommandObserver observer = new CommandObserver();
         //=== Servos
             public Servo[] allServos = new Servo[servoNames.length];//initial servo storage
             public Servo[] mappedServos = new Servo[servoNames.length];//mapped servo storage
@@ -208,15 +207,10 @@ public class HolonomicDrive extends LinearOpMode {
                     }
                 //=== Linear Slide
                     this.linearSlideMotor = hardwareMap.dcMotor.get(this.linearSlideMotorName);
+                    this.linearSlideMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
                     if(this.linearSlideReverse){
                         //Reverse Direction
                         this.linearSlideMotor.setDirection(DcMotor.Direction.REVERSE);
-                    }
-                    if(this.slideUseEncoder){
-                        //ACCEPT encoder values!!
-                        this.linearSlideMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-                        this.linearSlideMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-                        //this.linearSlideMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
                     }
 
                 //=== H Slide
@@ -227,8 +221,14 @@ public class HolonomicDrive extends LinearOpMode {
                     }
 
                     //ACCEPT encoder values!!
-                    this.hSlideMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-                    this.hSlideMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+                    if(hSlidePositionBased){
+                        this.hSlideMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+                        this.hSlideMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+                    }else{
+                        this.hSlideMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+                        this.hSlideMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);// THIS IS COUNTERINTUATIVE but run without encoder means it modifies how the lib works... you can still observe the encoder...
+                    }
+
                     //this.linearSlideMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
 
                 //======== Wait for Start ========
@@ -279,7 +279,10 @@ public class HolonomicDrive extends LinearOpMode {
                 //Returns true/false
                 return abs(inputValue) > thresholdValue;
             }
-
+            //== check if an input is withine a certian range both min inclusive max inclusive
+                public boolean isInRange(int input,int min,int max){
+                    return (input<=max) && (input>=min);
+                }
         //===== Hardware methods
             //== Activates Motors with activationValues parameter and a precision parameter
                 public void activateMotors(double[] activationValues){
@@ -309,45 +312,26 @@ public class HolonomicDrive extends LinearOpMode {
                 }
             //==Activate linear Slide Motor
                 public void  activateSlide(double activationValue){
-                    // DO NOT use go to position instead just use encoders to observe the encoder value... max min if max min setpower = 0 use run using encoders
-
                     //Power Value
-                    double powerVal = this.linearSlideSpeed*abs(activationValue);
-                    //Use Encoder: if this is true then setPower determines speed
-                    if(this.slideUseEncoder){
-                        //NOTE context determines the next line's use!
-                        this.linearSlideMotor.setPower(powerVal);
-
-
-                        if((this.linearSlideMotor.getCurrentPosition() < this.slideMaxHeight) && (powerVal>=0) ){ // Less than Max and command go up
-                            this.linearSlideMotor.setPower(powerVal);
-                        }else if ((this.linearSlideMotor.getCurrentPosition() > this.slideMinHeight) && (powerVal<0)){// Greater than min command go down
-                            this.linearSlideMotor.setPower(powerVal);
-                        }else{// do nothing
-                            this.linearSlideMotor.setPower(0);
-                        }
-                    }else{
-                        //NOTE context
-                        this.linearSlideMotor.setPower(powerVal);
-                    }
+                    double powerVal = this.linearSlideSpeed*activationValue;
+                    this.linearSlideMotor.setPower(powerVal);
                 }
             //==Activate H slide
-                public void activateHSlide(double activationValue,int in){
+                public void activateHSlide(double activationValue,int in,int position){
                     /*
                     *   Activation Value is Speed
                     *    int in   .... when int in is positive 1 then move slide in else -1 then extend slide
                     *
                     *
                     * */
-
-                    double powerVal = in*this.hSlideSpeed*abs(activationValue);
-                    int position = this.hSlideMotor.getCurrentPosition();
-                    while(((hSlideMin<position ) &&(position < hSlideMax)) && (powerVal != 0)){
-                        telemetry.addData("HSLide Encoder value",this.hSlideMotor.getCurrentPosition());
+                    if(this.hSlidePositionBased){
+                        this.hSlideMotor.setTargetPosition(position);
+                        double powerVal = in*this.hSlideSpeed*abs(activationValue);
                         this.hSlideMotor.setPower(powerVal);
-                        position = this.hSlideMotor.getCurrentPosition();
+                    }else{
+                        double powerVal = in*this.hSlideSpeed*abs(activationValue);
+                        this.hSlideMotor.setPower(powerVal);
                     }
-                    this.hSlideMotor.setPower(0);
                 }
                 //== Activates Servos with POSITION values as a list:
                 public void activateServos(double[] activationValues){
@@ -374,19 +358,24 @@ public class HolonomicDrive extends LinearOpMode {
 
         //===== Playback and Recording methods
             //== handle the intermediary recording Logic
-                /*public void handleRecording(Gamepad inputCommands){
+                public void handleRecording(Gamepad inputCommands,Gamepad recordingManager){
                 // Do the settings allow recording
                 if(this.enableRecording){
+
                     //=== Permit a new recording to begin
-                    if(inputCommands.start){
+                    if(recordingManager.a){
                         this.isRecording = true;
+                        telemetry.addData("IS RECCORDING:","start");
+                        telemetry.update();
                     }
                     //=== Observe:
                     if(this.isRecording){
+                        telemetry.addData("IS RECCORDING:","observing");
+                        telemetry.update();
                         this.observer.record(inputCommands);
                     }
                     //=== Save the reccording if stop command
-                    if(inputCommands.back && this.isRecording){
+                    if(recordingManager.b && this.isRecording){
 
                         //== Unique Timestamp
                         String timeStamp = new SimpleDateFormat("HH.mm.ss").format(new Date());
@@ -398,49 +387,58 @@ public class HolonomicDrive extends LinearOpMode {
                         String filepath = new File(saveDirectory,filename).toString();
 
                         //== Save the file
-                        this.observer.save(filepath);
+                        this.observer.save(filepath,this.telemetry);
+
+                        this.isRecording = false;
+                        telemetry.addData("IS RECCORDING:","Saved");
+                        telemetry.update();
                     }
                 }
             }
             //== handle getting the commands
-                public Gamepad handlePlayback(Gamepad inputCommands){
+                public Gamepad handlePlayback(Gamepad inputCommands,Gamepad playbackManager){
 
                     //Initilize the playback
-                    if(startPlaybackWhenInit && !isPlaybacking){
+                    if(startPlaybackWhenInit || playbackManager.x){
                         this.observer.open(useThisFilePathForPlayback);
                         this.isPlaybacking = true;
                     }
 
                     //If playback then playback commands else the input passes through
-                    if(this.isPlaybacking){
+                    if(playbackManager.y){
+                        this.isPlaybacking = false;
+                        return inputCommands;
+                    }else if(this.isPlaybacking){
                         return this.observer.playback();
                     }else{
                         return inputCommands;
                     }
                 }
-                */
+
 
         //===== Gamepad Logic Method
             //== dynamic control getter:
                 public Gamepad getCommands(){
                     //Command Storage
                     Gamepad giveTheseCommands;
+                    Gamepad playbackReccordingManager;
 
                     //This is where the commands are selected.... (useful for recording playback)
                     if(this.useGamepad1){// Note this code could be modified to pick and choose and return even more commands...
                         giveTheseCommands = gamepad1;
+                        playbackReccordingManager = gamepad2;
                     }else{
                         giveTheseCommands = gamepad2;
+                        playbackReccordingManager = gamepad1;
                     }
 
                     //Modify the Toggle Buttons!!!!
                     giveTheseCommands.y = this.allToggleables[1].toggled(giveTheseCommands.y);// playback should override this...
 
                     //=== Record Commands: press <start> to start reccording... <back> to stop
-                    //this.handleRecording(giveTheseCommands);
-
+                    this.handleRecording(giveTheseCommands,playbackReccordingManager);
                     //If not playback then giveTheseCommands is not modified...
-                    //giveTheseCommands = this.handlePlayback(giveTheseCommands);
+                    giveTheseCommands = this.handlePlayback(giveTheseCommands,playbackReccordingManager);
 
                     //Return the commands
                     return giveTheseCommands;
@@ -578,10 +576,13 @@ public class HolonomicDrive extends LinearOpMode {
 
         }
         public void HSlide(Gamepad currentCommands){
+            // The code works for extend/retract all and incrementally.. if not position based the 3rd arg is ignored... otherwise all 3 used...
             if(currentCommands.left_bumper){// Retract
-                this.activateHSlide(1,-1);
+                this.activateHSlide(1,-1,hSlideMin);
             }else if (currentCommands.right_bumper){// Extend
-                this.activateHSlide(1,1);
+                this.activateHSlide(1,1,hSlideMax);
+            }else if (!hSlidePositionBased){
+                this.activateHSlide(0,0,0);// This makes sure if it is not using position the motor is stopped... the position 0 is ignored
             }
         }
 

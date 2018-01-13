@@ -3,11 +3,19 @@ package org.firstinspires.ftc.teamcode;
 /**
  * Created by Mike on 12/28/2017.
  */
+
 import com.qualcomm.robotcore.hardware.Gamepad;
-import com.fasterxml.jackson.databind.*;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.File;
 import java.util.ArrayList;
-import android.content.Context;
+import java.io.*;
+import java.util.Scanner;
+
+import com.fasterxml.jackson.core.type.TypeReference;
+
+import org.firstinspires.ftc.robotcore.external.Telemetry;
+
+
 
   /*
         *   Record(Gamepad): build list of gamepad coppies
@@ -16,11 +24,9 @@ import android.content.Context;
         *   open(filename): Open a json and Convert
         * */
 
-  /*
+
 public class CommandObserver {
 
-    //Json Handler
-    ObjectMapper myJsonHandler = new ObjectMapper();
 
     //Save Recorded Commands
     public ArrayList<Gamepad> gamepadsToSave = new ArrayList<Gamepad>();
@@ -48,25 +54,61 @@ public class CommandObserver {
     }
 
     //== Save the Recording to a filepath:
-    public void save(String filepathname){
+    public void save(String filepathname, Telemetry telem){
 
         try{
+            //Json Handler
+            ObjectMapper mapper = new ObjectMapper();
 
-            myJsonHandler.writeValue(new File(filepathname),recordedGamepads);// skip exception handling for jackson... they wrote it wrong...
-        }catch(java.io.IOException fileError){
+            //Temp
 
+            String jsonData = mapper.writeValueAsString(this.recordedGamepads);
+            /*
+            //Write To Byte Stream
+                ByteArrayOutputStream temp = new ByteArrayOutputStream();
+                mapper.writeValue(temp,);
+
+                //Get Text From ByteStream
+                final byte[] bytedata = temp.toByteArray();
+
+                //Convert to string
+                String jsonData = new String(bytedata);
+            */
+            telem.addData("Command Observer [Save]:","Json Made "+jsonData);
+            //Create the new file:
+            File recordingFile = new File(filepathname);
+            recordingFile.createNewFile();
+            telem.addData("Command Observer [Save]:","File Created");
+
+            //Write the String Json Data to the file:
+            FileWriter writer = new FileWriter(recordingFile);
+            writer.write(jsonData);
+            writer.flush();
+            telem.addData("Command Observer [Save]:","Data Written");
+
+            //Close
+            writer.close();
+            telem.addData("Command Observer [Save]:","File Closed");
+
+
+        }catch(Exception err){
+            err.printStackTrace();
+            telem.addData("FILE THING:",err);
         }
     }
 
     //== Save the Recording to a filepath:
     public void open(String filepathname){
         try{
-            recordedGamepads = myJsonHandler.readValue(new File(filepathname),ArrayList.class);// skip exception handling for jackson... they wrote it wrong...
-        }catch(java.io.IOException fileError){
-            fileError.setStackTrace();
+            File recordingFile  = new File(filepathname);
+            ObjectMapper mapper = new ObjectMapper();
+            String jsonFromFile= new Scanner(recordingFile).useDelimiter("\\Z").next();
+            ArrayList<Gamepad> convertedFileData = mapper.readValue(jsonFromFile, new TypeReference<ArrayList<Gamepad>>(){});
+            this.recordedGamepads = convertedFileData;
+        }catch(Exception err){
+            err.printStackTrace();
         }
     }
 
 
 }
-*/
