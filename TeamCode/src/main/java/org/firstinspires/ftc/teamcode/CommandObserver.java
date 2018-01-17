@@ -98,14 +98,17 @@ public class CommandObserver {
     }
 
     //== Save the Recording to a filepath:
-    public void open(String filepathname){
+    public void open(String filepathname,Telemetry telem){
         try{
             File recordingFile  = new File(filepathname);
             ObjectMapper mapper = new ObjectMapper();
             String jsonFromFile= new Scanner(recordingFile).useDelimiter("\\Z").next();
+            telem.addData("JSON DATA FIle Opened",jsonFromFile);
             ArrayList<Gamepad> convertedFileData = mapper.readValue(jsonFromFile, new TypeReference<ArrayList<Gamepad>>(){});
+            telem.addData("Data Converted","");
             this.recordedGamepads = convertedFileData;
         }catch(Exception err){
+            telem.addData("ERROR","");
             err.printStackTrace();
         }
     }

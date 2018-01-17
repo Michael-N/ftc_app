@@ -19,6 +19,7 @@ import java.io.File;
  *
  * note to the user: documentation/help is provided as comments in the functions, methods, or sections
  */
+//below line changes to @Autonomous(name="AutonHolonomicDrive", group="Scenario Blue 1")
 @TeleOp(name = "HolonomicDrive")
 public class HolonomicDrive extends LinearOpMode {
     //=========== Controls Guide ==================
@@ -64,11 +65,15 @@ public class HolonomicDrive extends LinearOpMode {
     *                   category
     * */
     //=========================== Settings ============================
+        //=== AUTON MODE
+            //YES this fundamentally affects all the code! do not mess with this.... if the above says teleop then this is false if it says auton then this can be true...
+            public boolean ISAUTONMODE = false;
 
         //=== Motors for Wheels
             public String[] motorNames = {"motorLeftFront","motorLeftRear","motorRightFront","motorRightRear"};// the name of the motor as specified in the config file on the Robot Controller Phone
             public int[] motorMappings = {0,1,2,3};// permits switching how the program assigns indicies to the motors specified above
             public boolean[] motorReverse = {true,true,false,false}; //applied after mappings; corresponds to index of mapped motor; reverses initial spin direction
+            public int[] hasEncoderSensor = {1,3}; // indexes of the motors which have encoders... index by 0 (after mappings)
 
         //=== Motor for Linear slide:
             public String linearSlideMotorName = "linearSlide";// the name of the motor as specified in the config file on the Robot Controller Phone
@@ -102,12 +107,13 @@ public class HolonomicDrive extends LinearOpMode {
             public double diagonalThreshold = 0.24;// threshold for diagonal movement
             public double triggerThreshold = 0.15;// only accepts values with a absolute value greater than this
             public boolean useGamepad1 = true; //The controller that clicks <start> <a> is gamepad 1 else use gamepad 2 <start> <b>
+            public boolean useOneController = true;// THIS WILL DISABLE PLAYBACK!!!!! AND RECORDING THOSE REQUIRE a seccond controller
         //=== Reccording
-            public boolean enableRecording = true;// Permit Recording
+            public boolean enableRecording = true;// Permit Recording... if useOneController is true then playback and recording is disabled... they require a second controller
             public String saveDirectory = ""; //Allow the user to record the gamepad inputs by pressing <start> and stop by <back>
 
         //=== Playback
-            public boolean startPlaybackWhenInit = false;// Begin a playback specified below when robot is activated
+            public boolean startPlaybackWhenInit = false;// Begin a playback specified below when robot is activated...  if useOneController is true then playback and recording is disabled... they require a second controller
             public String useThisFilePathForPlayback  = "";// The reccording file to be used for playback
 
     //========================= Helper Classes ================================
@@ -179,13 +185,18 @@ public class HolonomicDrive extends LinearOpMode {
                     for(int j=0;j<motorNames.length;j++){
                         this.mappedMotors[j] = this.allMotors[this.motorMappings[j]];
                     }
-                    //=== Initialize reverses
+                    //=== Initialize reverses and change for auton mode
                     for( int i=0; i<motorNames.length; i++){
                         //Reverses:
                         if(this.motorReverse[i]){
                             this.mappedMotors[i].setDirection(DcMotor.Direction.REVERSE);
                         }
 
+                        //Auton
+                        if(this.ISAUTONMODE){
+                            this.mappedMotors[i].setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+                            this.mappedMotors[i].setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+                        }
                     }
                 //=== Claw State
                     this.clawIsOpen = clawInitialStateOpen;
@@ -283,7 +294,8 @@ public class HolonomicDrive extends LinearOpMode {
                 public boolean isInRange(int input,int min,int max){
                     return (input<=max) && (input>=min);
                 }
-        //===== Hardware methods
+
+        //===== Hardware methods Teleop
             //== Activates Motors with activationValues parameter and a precision parameter
                 public void activateMotors(double[] activationValues){
                     /*
@@ -333,6 +345,15 @@ public class HolonomicDrive extends LinearOpMode {
                         this.hSlideMotor.setPower(powerVal);
                     }
                 }
+                public void hSlideExtend(){
+                    this.activateHSlide(1,1,hSlideMax);
+                }
+                public void hSlideRetract(){
+                    this.activateHSlide(1,-1,hSlideMin);
+                }
+                public void hSlideStayStill(){
+                    this.activateHSlide(0,0,0);// This makes sure if it is not using position the motor is stopped... the position 0 is ignored
+                }
                 //== Activates Servos with POSITION values as a list:
                 public void activateServos(double[] activationValues){
                     for(int k=0;k<activationValues.length;k++){
@@ -355,7 +376,36 @@ public class HolonomicDrive extends LinearOpMode {
                     }
                     return true;
                 }
+        //===== Hardware Methods Autonomous
+                public void autonPlanarMovement(int x, int y, int magnitude){
+                    // x and y must both be on [-1,1]
+                    double stick_x = x;
+                    double stick_y = y;
 
+                    double[] horizontalActivations = {stick_x,-stick_x,-stick_x,stick_x};
+                    double[] verticalActivations = {-stick_y,-stick_y,-stick_y,-stick_y};
+                    double[] stopActivations = {0,0,0,0};
+
+                    DcMotor motorLeft = this.allMotors[this.hasEncoderSensor[0]];
+                    DcMotor motorRight = this.allMotors[this.hasEncoderSensor[1]];
+
+                    motorLeft.setTargetPosition(magnitude);// left rear
+                    motorRight.setTargetPosition(magnitude);//right rear
+
+                    if(x!=0){
+                        this.activateMotors(horizontalActivations);
+                    }
+                    else if (y!=0){
+                        this.activateMotors(verticalActivations);
+                    }
+
+                    while(opModeIsActive() && (motorLeft.isBusy() || motorRight.isBusy())){
+                        idle();
+                    }
+
+                    this.activateMotors(stopActivations);
+
+                }
         //===== Playback and Recording methods
             //== handle the intermediary recording Logic
                 public void handleRecording(Gamepad inputCommands,Gamepad recordingManager){
@@ -400,8 +450,9 @@ public class HolonomicDrive extends LinearOpMode {
 
                     //Initilize the playback
                     if(startPlaybackWhenInit || playbackManager.x){
-                        this.observer.open(useThisFilePathForPlayback);
+                        this.observer.open(useThisFilePathForPlayback,telemetry);
                         this.isPlaybacking = true;
+                        telemetry.update();
                     }
 
                     //If playback then playback commands else the input passes through
@@ -435,10 +486,14 @@ public class HolonomicDrive extends LinearOpMode {
                     //Modify the Toggle Buttons!!!!
                     giveTheseCommands.y = this.allToggleables[1].toggled(giveTheseCommands.y);// playback should override this...
 
-                    //=== Record Commands: press <start> to start reccording... <back> to stop
-                    this.handleRecording(giveTheseCommands,playbackReccordingManager);
-                    //If not playback then giveTheseCommands is not modified...
-                    giveTheseCommands = this.handlePlayback(giveTheseCommands,playbackReccordingManager);
+                    //use one controller...
+                    if(!useOneController){
+                        //=== Record Commands: press <start> to start reccording... <back> to stop
+                        this.handleRecording(giveTheseCommands,playbackReccordingManager);
+                        //If not playback then giveTheseCommands is not modified...
+                        giveTheseCommands = this.handlePlayback(giveTheseCommands,playbackReccordingManager);
+                    }
+
 
                     //Return the commands
                     return giveTheseCommands;
@@ -554,9 +609,9 @@ public class HolonomicDrive extends LinearOpMode {
         }
         public void Claw(Gamepad currentCommands){
             //=== Activation Positions Servos
-            double[] clawClosedActivations = {92,100};// Max = 180deg min = 0 deg asymmetry of activations due to frame asymmetry
-            double[] clawClosedFurtherActivations = {107,115};
-            double[] clawOpenActivations= {0,0};
+            double[] clawClosedActivations = {96,98};// Max = 180deg min = 0 deg asymmetry of activations due to frame asymmetry
+            double[] clawClosedFurtherActivations = {103,105};
+            double[] clawOpenActivations= {10,10};
 
             //doClawOpen
             if(currentCommands.a){//=== Claw Open
@@ -576,14 +631,26 @@ public class HolonomicDrive extends LinearOpMode {
 
         }
         public void HSlide(Gamepad currentCommands){
+            //this code deserves to be re-written and simplified... this is grotesquely overcomplex...
+            /*
+            *           Activation Value:  motor speed
+            *           in: -1 means retract... 1 means extend
+            *           3rd Arg: keep moving till encoder hits this value...
+            *
+            * */
             // The code works for extend/retract all and incrementally.. if not position based the 3rd arg is ignored... otherwise all 3 used...
             if(currentCommands.left_bumper){// Retract
-                this.activateHSlide(1,-1,hSlideMin);
+                this.hSlideRetract();
             }else if (currentCommands.right_bumper){// Extend
-                this.activateHSlide(1,1,hSlideMax);
+                this.hSlideExtend();
             }else if (!hSlidePositionBased){
-                this.activateHSlide(0,0,0);// This makes sure if it is not using position the motor is stopped... the position 0 is ignored
+               this.hSlideStayStill();
             }
+        }
+        public void AutonScenarioBlueOne(){
+            this.autonPlanarMovement(0,-1,3*1440);
+            this.hSlideExtend();
+            this.hSlideStayStill();
         }
 
     //========================== Run Op Mode ==============================
@@ -595,14 +662,20 @@ public class HolonomicDrive extends LinearOpMode {
         //======== Loop ========
         while(opModeIsActive()){
 
-            //=== Get Gamepad State
-            Gamepad currentCommands = this.getCommands();// get the current commands: abstractify controls instead of redefining...
+            if(!ISAUTONMODE){
+                //=== Get Gamepad State
+                Gamepad currentCommands = this.getCommands();// get the current commands: abstractify controls instead of redefining...
 
-            //=== Feature Calls
-            DirectionalMovement(currentCommands);
-            LinearSlide(currentCommands);
-            Claw(currentCommands);
-            HSlide(currentCommands);
+                //=== Feature Calls
+                DirectionalMovement(currentCommands);
+                LinearSlide(currentCommands);
+                Claw(currentCommands);
+                HSlide(currentCommands);
+
+            }else{
+
+                AutonScenarioBlueOne(); // Spin 3 backwards and then extend hSlide
+            }
 
             idle();
         }
