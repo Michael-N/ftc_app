@@ -73,7 +73,7 @@ public class HolonomicDrive extends LinearOpMode {
             public String[] motorNames = {"motorLeftFront","motorLeftRear","motorRightFront","motorRightRear"};// the name of the motor as specified in the config file on the Robot Controller Phone
             public int[] motorMappings = {0,1,2,3};// permits switching how the program assigns indicies to the motors specified above
             public boolean[] motorReverse = {true,true,false,false}; //applied after mappings; corresponds to index of mapped motor; reverses initial spin direction
-            public int[] hasEncoderSensor = {1,3}; // indexes of the motors which have encoders... index by 0 (after mappings)
+            public int[] hasEncoderSensor = {0,3}; // indexes of the motors which have encoders... index by 0 (after mappings)
 
         //=== Motor for Linear slide:
             public String linearSlideMotorName = "linearSlide";// the name of the motor as specified in the config file on the Robot Controller Phone
@@ -329,7 +329,7 @@ public class HolonomicDrive extends LinearOpMode {
                     this.linearSlideMotor.setPower(powerVal);
                 }
             //==Activate H slide
-                public void activateHSlide(double activationValue,int in,int position){
+                public void activateHSlide(double activationValue,int in,int position,boolean auton){
                     /*
                     *   Activation Value is Speed
                     *    int in   .... when int in is positive 1 then move slide in else -1 then extend slide
@@ -339,20 +339,31 @@ public class HolonomicDrive extends LinearOpMode {
                     if(this.hSlidePositionBased){
                         this.hSlideMotor.setTargetPosition(position);
                         double powerVal = in*this.hSlideSpeed*abs(activationValue);
-                        this.hSlideMotor.setPower(powerVal);
+                        if(auton){
+                            while((abs(hSlideMotor.getCurrentPosition()) < position) && (position!=0)){
+                                this.hSlideMotor.setPower(powerVal);
+                            }
+                        }else{
+                            this.hSlideMotor.setPower(powerVal);
+                        }
+
+
                     }else{
                         double powerVal = in*this.hSlideSpeed*abs(activationValue);
                         this.hSlideMotor.setPower(powerVal);
                     }
                 }
                 public void hSlideExtend(){
-                    this.activateHSlide(1,1,hSlideMax);
+                    this.activateHSlide(1,1,hSlideMax,ISAUTONMODE);
                 }
                 public void hSlideRetract(){
-                    this.activateHSlide(1,-1,hSlideMin);
+                    this.activateHSlide(1,-1,hSlideMin,ISAUTONMODE);
                 }
                 public void hSlideStayStill(){
-                    this.activateHSlide(0,0,0);// This makes sure if it is not using position the motor is stopped... the position 0 is ignored
+                    if(!this.hSlidePositionBased){
+                        this.activateHSlide(0,0,0,ISAUTONMODE);// This makes sure if it is not using position the motor is stopped... the position 0 is ignored
+                    }
+
                 }
                 //== Activates Servos with POSITION values as a list:
                 public void activateServos(double[] activationValues){
@@ -377,7 +388,7 @@ public class HolonomicDrive extends LinearOpMode {
                     return true;
                 }
         //===== Hardware Methods Autonomous
-                public void autonPlanarMovement(int x, int y, int magnitude){
+                public void autonPlanarMovement(int x, int y, int magnitude,Telemetry telem){
                     // x and y must both be on [-1,1]
                     double stick_x = x;
                     double stick_y = y;
@@ -386,8 +397,9 @@ public class HolonomicDrive extends LinearOpMode {
                     double[] verticalActivations = {-stick_y,-stick_y,-stick_y,-stick_y};
                     double[] stopActivations = {0,0,0,0};
 
-                    DcMotor motorLeft = this.allMotors[this.hasEncoderSensor[0]];
+                    DcMotor motorLeft = this.allMotors[this.hasEncoderSensor[0]];//front motor
                     DcMotor motorRight = this.allMotors[this.hasEncoderSensor[1]];
+
 
                     motorLeft.setTargetPosition(magnitude);// left rear
                     motorRight.setTargetPosition(magnitude);//right rear
@@ -399,7 +411,21 @@ public class HolonomicDrive extends LinearOpMode {
                         this.activateMotors(verticalActivations);
                     }
 
-                    while(opModeIsActive() && (motorLeft.isBusy() || motorRight.isBusy())){
+                    while(opModeIsActive() && (abs(motorLeft.getCurrentPosition())<magnitude)){// use for 2 encoders...(motorLeft.isBusy() || motorRight.isBusy())
+                        DcMotor lf = this.allMotors[0];
+                        DcMotor rf = this.allMotors[2];
+                        DcMotor lb = this.allMotors[1];
+                        DcMotor rb = this.allMotors[3];
+                        telem.addData("[Encoder Vals]","test");
+                        telem.addData("[left front]",lf.getCurrentPosition());
+                        telem.addData("[right front]",rf.getCurrentPosition());
+                        telem.addData("[left back]",lb.getCurrentPosition());
+                        telem.addData("[right back]",rb.getCurrentPosition());
+                        /*
+                        telem.addData("Left",motorLeft.getCurrentPosition());
+                        telem.addData("right",motorRight.getCurrentPosition());
+                        */
+                        telem.update();
                         idle();
                     }
 
@@ -589,6 +615,17 @@ public class HolonomicDrive extends LinearOpMode {
             if(this.allFalse(willRunSequenceForOtherCommands)){//== If all the other commands are false then therfore stop!
                 this.activateMotors(stopActivations);
             }
+            Telemetry telem = this.telemetry;
+            DcMotor lf = this.allMotors[0];
+            DcMotor rf = this.allMotors[2];
+            DcMotor lb = this.allMotors[1];
+            DcMotor rb = this.allMotors[3];
+            telem.addData("[Encoder Vals]","test");
+            telem.addData("[left front]",lf.getCurrentPosition());
+            telem.addData("[right front]",rf.getCurrentPosition());
+            telem.addData("[left back]",lb.getCurrentPosition());
+            telem.addData("[right back]",rb.getCurrentPosition());
+            telem.update();
         }
         public void LinearSlide(Gamepad currentCommands){
             //=== Command Conditions LinearSlide
@@ -648,9 +685,23 @@ public class HolonomicDrive extends LinearOpMode {
             }
         }
         public void AutonScenarioBlueOne(){
-            this.autonPlanarMovement(0,-1,3*1440);
+            /*
+                foreward
+                left
+                backwards
+            *
+            *
+            * */
+            this.autonPlanarMovement(-1,0,1080,telemetry);// Magnitude is based off of the encoder value ... absolute distance... not vector
             this.hSlideExtend();
-            this.hSlideStayStill();
+            telemetry.addData("Extending h Slide","extended");
+            telemetry.update();
+            //this.hSlideStayStill() NOT NEEDED BC it is position based
+            while(true){
+                // LOOOOOOOP
+                telemetry.addData("End of Auton","loop");
+                telemetry.update();
+            }
         }
 
     //========================== Run Op Mode ==============================
