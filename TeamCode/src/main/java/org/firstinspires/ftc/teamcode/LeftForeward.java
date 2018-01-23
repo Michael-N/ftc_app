@@ -1,17 +1,22 @@
 package org.firstinspires.ftc.teamcode;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
-import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
-import static java.lang.Math.*;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
+import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.hardware.Servo;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
-import com.qualcomm.robotcore.robocol.Command;
-import java.util.Date;
-import java.text.SimpleDateFormat;
+
 import java.io.File;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
+import static java.lang.Math.abs;
+import static java.lang.Math.pow;
+import static java.lang.Math.round;
+import static java.lang.Math.sqrt;
+import static java.lang.Math.tanh;
 
 
 /**
@@ -20,8 +25,8 @@ import java.io.File;
  * note to the user: documentation/help is provided as comments in the functions, methods, or sections
  */
 //below line changes to @Autonomous(name="AutonHolonomicDrive", group="Scenario Blue 1")
-@TeleOp(name = "HolonomicDrive")
-public class HolonomicDrive extends LinearOpMode {
+@Autonomous(name = "LeftForeward",group="Final")
+public class LeftForeward extends LinearOpMode {
     //=========== Controls Guide ==================
     /*
     *   Rotation: <Right-Trigger> Clockwise, <Left-Trigger> CounterClockwise
@@ -67,7 +72,7 @@ public class HolonomicDrive extends LinearOpMode {
     //=========================== Settings ============================
         //=== AUTON MODE
             //YES this fundamentally affects all the code! do not mess with this.... if the above says teleop then this is false if it says auton then this can be true...
-            public boolean ISAUTONMODE = false;
+            public boolean ISAUTONMODE = true;
 
         //=== Motors for Wheels
             public String[] motorNames = {"motorLeftFront","motorLeftRear","motorRightFront","motorRightRear"};// the name of the motor as specified in the config file on the Robot Controller Phone
@@ -426,7 +431,6 @@ public class HolonomicDrive extends LinearOpMode {
                         telem.addData("right",motorRight.getCurrentPosition());
                         */
                         telem.update();
-
                     }
 
                     this.activateMotors(stopActivations);
@@ -530,9 +534,9 @@ public class HolonomicDrive extends LinearOpMode {
         public void DirectionalMovement(Gamepad currentCommands){
 
             //=== Use Precision Modifier:
-           /* if(currentCommands.y){
+            if(currentCommands.y){
                 this.isPrecisionSpeed = !this.isPrecisionSpeed; // toggle precision speed by 'clicking' y
-            }*/
+            }
             //=== Controls: Redefine LEFT Stick Values (invert if settings say so):
             double stick_x = this.invertControlsXY[0] ? -currentCommands.left_stick_x : currentCommands.left_stick_x;
             double stick_y = this.invertControlsXY[1] ? -currentCommands.left_stick_y : currentCommands.left_stick_y;
@@ -693,11 +697,12 @@ public class HolonomicDrive extends LinearOpMode {
             *
             * */
             // Magnitude is based off of the encoder value ... absolute distance... not vector
-            this.autonPlanarMovement(-1,0,1080,telemetry);// Left
-            //this.autonPlanarMovement(0,1,1080,telemetry);// Foreward
-            //this.autonPlanarMovement(0,-1,1080,telemetry); //Backward
 
+            this.autonPlanarMovement(-1,0,722,telemetry);// Left
             this.hSlideExtend();
+            this.autonPlanarMovement(0,1,722,telemetry);// Foreward
+
+
             telemetry.addData("Extending h Slide","extended");
             telemetry.update();
             //this.hSlideStayStill() NOT NEEDED BC it is position based
