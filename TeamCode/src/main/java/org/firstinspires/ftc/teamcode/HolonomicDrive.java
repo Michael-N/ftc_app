@@ -430,6 +430,14 @@ public class HolonomicDrive extends LinearOpMode {
                     }
 
                     this.activateMotors(stopActivations);
+                    this.allMotors[0].setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+                    this.allMotors[1].setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+                    this.allMotors[2].setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+                    this.allMotors[3].setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+                    this.allMotors[0].setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+                    this.allMotors[1].setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+                    this.allMotors[2].setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+                    this.allMotors[3].setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
                 }
         //===== Playback and Recording methods

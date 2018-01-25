@@ -436,6 +436,14 @@ public class LeftBackwards extends LinearOpMode {
                     }
 
                     this.activateMotors(stopActivations);
+                    this.allMotors[0].setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+                    this.allMotors[1].setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+                    this.allMotors[2].setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+                    this.allMotors[3].setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+                    this.allMotors[0].setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+                    this.allMotors[1].setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+                    this.allMotors[2].setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+                    this.allMotors[3].setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
                 }
         //===== Playback and Recording methods
@@ -700,16 +708,14 @@ public class LeftBackwards extends LinearOpMode {
             * */
             // Magnitude is based off of the encoder value ... absolute distance... not vector
 
-            this.autonPlanarMovement(-1,0,722,telemetry);// Left
+            //this.autonPlanarMovement(-1,0,722,telemetry);// Left
             this.hSlideExtend();
-            this.autonPlanarMovement(0,-1,722,telemetry);// Foreward
+            this.autonPlanarMovement(0,1,250,telemetry);
+            this.hSlideRetract();
 
-
-            telemetry.addData("Extending h Slide","extended");
+            telemetry.addData("retracted","");
             telemetry.update();
-            //this.hSlideStayStill() NOT NEEDED BC it is position based
-            telemetry.addData("End of Auton","loop");
-            telemetry.update();
+            //this.autonPlanarMovement(0,1,1400,telemetry);
         }
 
 
