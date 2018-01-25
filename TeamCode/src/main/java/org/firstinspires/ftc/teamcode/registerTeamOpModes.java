@@ -103,7 +103,9 @@ public class registerTeamOpModes
     // manager.register("Vuforia Navigation",     ConceptVuforiaNavigation.class);
     manager.register("HolonomicDriveFailsafe", HolonomicDriveFailsafe.class);
     manager.register("HolonomicDrive", HolonomicDrive.class);
-    manager.register("LeftForeward",LeftForeward.class);
-    manager.register("LeftBackwards",LeftBackwards.class);
+    manager.register("ForwardBackwards",ForwardBackwards.class);
+    manager.register("BackwardsForeward",BackwardsForward.class);
+    manager.register("ForwardForeward",ForwardForward.class);
+    manager.register("BackwardsBackwards",BackwardsBackwards.class);
   }
 }

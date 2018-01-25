@@ -1,8 +1,7 @@
 package org.firstinspires.ftc.teamcode;
 
-import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
-import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
+import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.hardware.Servo;
@@ -26,8 +25,8 @@ import static java.lang.Math.tanh;
  * note to the user: documentation/help is provided as comments in the functions, methods, or sections
  */
 //below line changes to @Autonomous(name="Foreward")
-@Autonomous(name="LeftBackwards", group="Final")
-public class LeftBackwards extends LinearOpMode {
+@Autonomous(name="BackwardsBackwards", group="Final")
+public class BackwardsBackwards extends LinearOpMode {
     //=========== Controls Guide ==================
     /*
     *   Rotation: <Right-Trigger> Clockwise, <Left-Trigger> CounterClockwise
@@ -710,8 +709,10 @@ public class LeftBackwards extends LinearOpMode {
 
             //this.autonPlanarMovement(-1,0,722,telemetry);// Left
             this.hSlideExtend();
-            this.autonPlanarMovement(0,1,250,telemetry);
+            this.autonPlanarMovement(0,1,250,telemetry); // 1 is backwards
             this.hSlideRetract();
+            this.autonPlanarMovement(0,-1,250,telemetry); // 1 is backwards
+            this.autonPlanarMovement(0,1,4400,telemetry);
 
             telemetry.addData("retracted","");
             telemetry.update();

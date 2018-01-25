@@ -1,6 +1,7 @@
 package org.firstinspires.ftc.teamcode;
-import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
+
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
+import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.Gamepad;
@@ -24,9 +25,9 @@ import static java.lang.Math.tanh;
  *
  * note to the user: documentation/help is provided as comments in the functions, methods, or sections
  */
-//below line changes to @Autonomous(name="AutonHolonomicDrive", group="Scenario Blue 1")
-@Autonomous(name = "LeftForeward",group="Final")
-public class LeftForeward extends LinearOpMode {
+//below line changes to @Autonomous(name="Foreward")
+@Autonomous(name="ForwardBackwards", group="Final")
+public class ForwardBackwards extends LinearOpMode {
     //=========== Controls Guide ==================
     /*
     *   Rotation: <Right-Trigger> Clockwise, <Left-Trigger> CounterClockwise
@@ -431,6 +432,7 @@ public class LeftForeward extends LinearOpMode {
                         telem.addData("right",motorRight.getCurrentPosition());
                         */
                         telem.update();
+
                     }
 
                     this.activateMotors(stopActivations);
@@ -708,13 +710,14 @@ public class LeftForeward extends LinearOpMode {
 
             //this.autonPlanarMovement(-1,0,722,telemetry);// Left
             this.hSlideExtend();
-            this.autonPlanarMovement(0,-1,250,telemetry);
+            this.autonPlanarMovement(0,-1,250,telemetry); // 1 is backwards
             this.hSlideRetract();
-            this.autonPlanarMovement(0,-1,1400,telemetry);
+            this.autonPlanarMovement(0,1,250,telemetry); // 1 is backwards
+            this.autonPlanarMovement(0,1,4400,telemetry);
+
             telemetry.addData("retracted","");
             telemetry.update();
-            //this.autonPlanarMovement(0,-1,1400,telemetry);
-
+            //this.autonPlanarMovement(0,1,1400,telemetry);
         }
 
 
