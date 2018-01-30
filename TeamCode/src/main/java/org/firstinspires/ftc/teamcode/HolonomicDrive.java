@@ -71,7 +71,7 @@ public class HolonomicDrive extends LinearOpMode {
 
         //=== Motors for Wheels
             public String[] motorNames = {"motorLeftFront","motorLeftRear","motorRightFront","motorRightRear"};// the name of the motor as specified in the config file on the Robot Controller Phone
-            public int[] motorMappings = {0,1,2,3};// permits switching how the program assigns indicies to the motors specified above
+            public int[] motorMappings = {0,2,1,3};// permits switching how the program assigns indicies to the motors specified above
             public boolean[] motorReverse = {true,true,false,false}; //applied after mappings; corresponds to index of mapped motor; reverses initial spin direction
             public int[] hasEncoderSensor = {0,3}; // indexes of the motors which have encoders... index by 0 (after mappings)
 
