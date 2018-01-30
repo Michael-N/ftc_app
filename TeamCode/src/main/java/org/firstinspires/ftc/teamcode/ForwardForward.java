@@ -445,6 +445,14 @@ public class ForwardForward extends LinearOpMode {
                     this.allMotors[3].setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
                 }
+                public void autonOpenClaw(){
+                    double[] clawOpenActivations= {10,10};
+                    this.activateServos(clawOpenActivations);
+                }
+                public void autonCloseClaw(){
+                    double[] clawClosedActivations = {96,98};
+                    this.activateServos(clawClosedActivations);
+                }
         //===== Playback and Recording methods
             //== handle the intermediary recording Logic
                 public void handleRecording(Gamepad inputCommands,Gamepad recordingManager){
@@ -708,11 +716,17 @@ public class ForwardForward extends LinearOpMode {
             // Magnitude is based off of the encoder value ... absolute distance... not vector
 
             //this.autonPlanarMovement(-1,0,722,telemetry);// Left
-            this.hSlideExtend();
-            this.autonPlanarMovement(0,-1,250,telemetry); // 1 is backwards
-            this.hSlideRetract();
-            this.autonPlanarMovement(0,1,250,telemetry); // 1 is backwards
+            //this.hSlideExtend();
+            //this.autonOpenClaw();
+            //this.autonCloseClaw();
+            //this.autonPlanarMovement(0,-1,250,telemetry); // 1 is backwards
+            //this.hSlideRetract();
+            //sleep(1000);
+            //this.autonPlanarMovement(0,1,250,telemetry); // 1 is backwards
+            //double test[] = {10,98};
+            //this.activateServos(test);
             this.autonPlanarMovement(0,-1,4400,telemetry);
+            //8u6this.autonCloseClaw();
 
             telemetry.addData("retracted","");
             telemetry.update();

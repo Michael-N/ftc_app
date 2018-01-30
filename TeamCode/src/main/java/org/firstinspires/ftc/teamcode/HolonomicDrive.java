@@ -96,6 +96,7 @@ public class HolonomicDrive extends LinearOpMode {
             public double precisionSpeed = 0.5;//  % of max speed as fraction:  tap & release <y> to toggle precision speed
             public double changePrecisionSpeedStep = 0.01;// The step size for speed changing
             public double regularSpeed = 0.5;// the % percentage  of max speed as a fraction
+            public double turnSpeed = 0.80;// the percentage of the regular speed
             public double linearSlideSpeed = 0.5;// independent of all other speeds and precision modes absolute speed value
             public double hSlideSpeed = 0.5;// as the dividing factor of the activation value... similar to linear slide speed
 
@@ -104,7 +105,7 @@ public class HolonomicDrive extends LinearOpMode {
             public String[] makeToggleable = {"x","y"};// not significant since the toggle is  done bt index not index value.. merly asthetic...
             public int[] toggleDelays = {1600,900};// toggle delays for claw and precisionSpeed of the robot
             public double stickThreshold = 0.18;//threshold for vertical and horizontal movement
-            public double diagonalThreshold = 0.24;// threshold for diagonal movement
+            public double diagonalThreshold = 0.20;// threshold for diagonal movement
             public double triggerThreshold = 0.15;// only accepts values with a absolute value greater than this
             public boolean useGamepad1 = true; //The controller that clicks <start> <a> is gamepad 1 else use gamepad 2 <start> <b>
             public boolean useOneController = true;// THIS WILL DISABLE PLAYBACK!!!!! AND RECORDING THOSE REQUIRE a seccond controller
@@ -440,6 +441,14 @@ public class HolonomicDrive extends LinearOpMode {
                     this.allMotors[3].setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
                 }
+                public void autonOpenClaw(){
+                    double[] clawOpenActivations= {10,10};
+                    this.activateServos(clawOpenActivations);
+                }
+                public void autonCloseClaw(){
+                    double[] clawClosedActivations = {96,98};
+                    this.activateServos(clawClosedActivations);
+                }
         //===== Playback and Recording methods
             //== handle the intermediary recording Logic
                 public void handleRecording(Gamepad inputCommands,Gamepad recordingManager){
@@ -547,6 +556,10 @@ public class HolonomicDrive extends LinearOpMode {
             //== Triggers
             double rt = currentCommands.right_trigger;
             double lt=  currentCommands.left_trigger;
+
+            MecanumDrive mDrive = new MecanumDrive();
+            mDrive.setSpeed(this.regularSpeed);
+            this.activateMotors(mDrive.calculate(stick_x,stick_y,rt,lt));
             //=== Diagonal Movement Normalized:
                     /* ^above
 
@@ -560,6 +573,7 @@ public class HolonomicDrive extends LinearOpMode {
                             ---
                             x
                     */
+            /*
             double normalizedU = sqrt(pow(0.7071*stick_x,2.0) + pow(0.7071*stick_y,2.0)) * (stick_y/abs(stick_y));
             //Change precision speed
             if(currentCommands.dpad_right && (this.precisionSpeed <= 1)){//tick speed up
@@ -586,8 +600,8 @@ public class HolonomicDrive extends LinearOpMode {
             boolean[] willRunSequenceForOtherCommands = {doForRev,doHorz,doTurn,diagonalOne,diagonalTwo};// Stop
 
             //=== Activation Values Motors
-            double[] clockActivations = {rt,rt,-rt,-rt};
-            double[] cntrClockActivations = {-lt,-lt,lt,lt};
+            double[] clockActivations = {turnSpeed*rt,turnSpeed*rt,-turnSpeed*rt,-turnSpeed*rt};
+            double[] cntrClockActivations = {-turnSpeed*lt,-turnSpeed*lt,turnSpeed*lt,turnSpeed*lt};
             double[] horizontalActivations = {stick_x,-stick_x,-stick_x,stick_x};
             double[] verticalActivations = {-stick_y,-stick_y,-stick_y,-stick_y};
             double[] diagonalTopRightBackLeft = {0,-normalizedU,-normalizedU,0};// spin perpendicular diagonal wheels
@@ -633,7 +647,7 @@ public class HolonomicDrive extends LinearOpMode {
             telem.addData("[right front]",rf.getCurrentPosition());
             telem.addData("[left back]",lb.getCurrentPosition());
             telem.addData("[right back]",rb.getCurrentPosition());
-            telem.update();
+            telem.update();*/
         }
         public void LinearSlide(Gamepad currentCommands){
             //=== Command Conditions LinearSlide

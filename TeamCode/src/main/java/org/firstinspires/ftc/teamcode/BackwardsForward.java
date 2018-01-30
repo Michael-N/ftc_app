@@ -444,6 +444,14 @@ public class BackwardsForward extends LinearOpMode {
                     this.allMotors[3].setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
                 }
+                public void autonOpenClaw(){
+                    double[] clawOpenActivations= {10,10};
+                    this.activateServos(clawOpenActivations);
+                }
+                public void autonCloseClaw(){
+                    double[] clawClosedActivations = {96,98};
+                    this.activateServos(clawClosedActivations);
+                }
         //===== Playback and Recording methods
             //== handle the intermediary recording Logic
                 public void handleRecording(Gamepad inputCommands,Gamepad recordingManager){
@@ -540,6 +548,7 @@ public class BackwardsForward extends LinearOpMode {
 
     //======================= Feature Definitions ==========================
         public void DirectionalMovement(Gamepad currentCommands){
+
 
             //=== Use Precision Modifier:
             if(currentCommands.y){
@@ -707,11 +716,14 @@ public class BackwardsForward extends LinearOpMode {
             // Magnitude is based off of the encoder value ... absolute distance... not vector
 
             //this.autonPlanarMovement(-1,0,722,telemetry);// Left
-            this.hSlideExtend();
-            this.autonPlanarMovement(0,1,250,telemetry); // 1 is backwards
-            this.hSlideRetract();
-            this.autonPlanarMovement(0,-1,250,telemetry); // 1 is backwards
+            //this.hSlideExtend();
+            //this.autonPlanarMovement(0,1,250,telemetry); // 1 is backwards
+            //this.hSlideRetract();
+            //sleep(1000);
+            //this.autonPlanarMovement(0,-1,250,telemetry); // 1 is backwards
             this.autonPlanarMovement(0,1,4200,telemetry);
+            //this.autonPlanarMovement(0,-1,350,telemetry);
+            //this.autonPlanarMovement(0,1,400,telemetry);
             telemetry.addData("retracted","");
             telemetry.update();
             //this.autonPlanarMovement(0,-1,1400,telemetry);
